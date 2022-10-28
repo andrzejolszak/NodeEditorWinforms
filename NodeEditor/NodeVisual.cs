@@ -35,7 +35,7 @@ namespace NodeEditor
     public class NodeVisual
     {
         public const float NodeWidth = 140;
-        public const float HeaderHeight = 20;
+        public const float HeaderHeight = 32;
         public const float ComponentPadding = 2;
 
         /// <summary>
@@ -123,8 +123,6 @@ namespace NodeEditor
                     X = X + NodeWidth - SocketVisual.SocketHeight,
                     Y = Y + curOutputH
                 });
-                curOutputH += SocketVisual.SocketHeight + ComponentPadding;
-                curInputH += SocketVisual.SocketHeight + ComponentPadding;
             }
 
             ParameterInfo[] inputs = GetInputs();
@@ -155,7 +153,7 @@ namespace NodeEditor
                 socket.Name = output.Name;
                 socket.Width = SocketVisual.SocketWidth;
                 socket.X = X + i * ((NodeWidth - SocketVisual.SocketWidth) / len);
-                socket.Y = Y + curOutputH;
+                socket.Y = Y + HeaderHeight - SocketVisual.SocketHeight;
                 socket.Value = ctx[socket.Name];              
                 socketList.Add(socket);
             }
@@ -248,15 +246,7 @@ namespace NodeEditor
                     CustomEditor.ClientSize.Height + HeaderHeight + 8);                
             }
 
-            var inputs = GetInputs().Length;
-            var outputs = GetOutputs().Length;
-            if (Callable)
-            {
-                inputs++;
-                outputs++;
-            }
-            var h = HeaderHeight + Math.Max(inputs*(SocketVisual.SocketHeight + ComponentPadding),
-                outputs*(SocketVisual.SocketHeight + ComponentPadding)) + ComponentPadding*2f;
+            var h = HeaderHeight;
 
             csize.Width = Math.Max(csize.Width, NodeWidth);
             csize.Height = Math.Max(csize.Height, h);
@@ -317,10 +307,11 @@ namespace NodeEditor
             {                
                 g.FillRectangle(mouseHoverCaption ? Brushes.Cyan : Brushes.Aquamarine, caption);
             }
+
             g.DrawRectangle(Pens.Gray, Rectangle.Round(caption));
             g.DrawRectangle(Pens.Black, Rectangle.Round(rect));
 
-            g.DrawString(Name, SystemFonts.DefaultFont, Brushes.Black, new PointF(X + 3, Y + 3));       
+            g.DrawString(Name, SystemFonts.DefaultFont, Brushes.Black, new PointF(X + 3, Y + HeaderHeight/4));       
 
             var sockets = GetSockets();
             foreach (var socet in sockets)

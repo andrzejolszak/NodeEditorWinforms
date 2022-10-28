@@ -257,22 +257,7 @@ namespace NodeEditor
                     graph.Nodes.OrderBy(x => x.Order).FirstOrDefault(
                         x => new RectangleF(new PointF(x.X, x.Y), x.GetHeaderSize()).Contains(e.Location));
 
-                if (node != null && !mdown)
-                {
-                    
-                    node.IsSelected = true;
-                    
-                    node.Order = graph.Nodes.Min(x => x.Order) - 1;
-                    if (node.CustomEditor != null)
-                    {
-                        node.CustomEditor.BringToFront();
-                    }
-                    mdown = true;
-                    lastmpos = PointToScreen(e.Location);
-
-                    Refresh();
-                }
-                if (node == null && !mdown)
+                if (!mdown)
                 {
                     var nodeWhole =
                     graph.Nodes.OrderBy(x => x.Order).FirstOrDefault(
@@ -330,6 +315,23 @@ namespace NodeEditor
                         selectionStart = selectionEnd = e.Location;
                     }
                 }
+
+                if (node != null && !mdown && dragSocket == null)
+                {
+
+                    node.IsSelected = true;
+
+                    node.Order = graph.Nodes.Min(x => x.Order) - 1;
+                    if (node.CustomEditor != null)
+                    {
+                        node.CustomEditor.BringToFront();
+                    }
+                    mdown = true;
+                    lastmpos = PointToScreen(e.Location);
+
+                    Refresh();
+                }
+
                 if (node != null)
                 {
                     OnNodeContextSelected(node.GetNodeContext());

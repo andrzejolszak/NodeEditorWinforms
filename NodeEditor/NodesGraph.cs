@@ -52,7 +52,7 @@ namespace NodeEditor
                 var isoc = connection.InputNode.GetSockets().FirstOrDefault(x => x.Name == connection.InputSocketName);
                 var endSocket = isoc.GetBounds();
                 var begin = beginSocket.Location + new SizeF(beginSocket.Width / 2f, beginSocket.Height / 2f);
-                var end = endSocket.Location += new SizeF(endSocket.Width / 2f, endSocket.Height / 2f);                               
+                var end = endSocket.Location + new SizeF(endSocket.Width / 2f, endSocket.Height / 2f);                               
 
                 DrawConnection(g, epen2, begin, end);
                 DrawConnection(g, epen, begin, end);                
@@ -63,8 +63,8 @@ namespace NodeEditor
                 var beginSocket = osoc.GetBounds();
                 var isoc = connection.InputNode.GetSockets().FirstOrDefault(x => x.Name == connection.InputSocketName);
                 var endSocket = isoc.GetBounds();
-                var begin = beginSocket.Location + new SizeF(beginSocket.Width / 2f, beginSocket.Height / 2f);
-                var end = endSocket.Location += new SizeF(endSocket.Width / 2f, endSocket.Height / 2f);
+                var begin = beginSocket.Location + new SizeF(beginSocket.Width / 2f, beginSocket.Height);
+                var end = endSocket.Location + new SizeF(endSocket.Width / 2f, 0f);
                 
                 DrawConnection(g, cpen, begin, end);
                
@@ -90,11 +90,9 @@ namespace NodeEditor
             {
                 float amount = i/(float) (interpolation - 1);
                
-                var lx = Lerp(output.X, input.X, amount);
-                var d = Math.Min(Math.Abs(input.X - output.X), 100);
-                var a = new PointF((float) Scale(amount, 0, 1, output.X, output.X + d),
-                    output.Y);
-                var b = new PointF((float) Scale(amount, 0, 1, input.X-d, input.X), input.Y);
+                var d = Math.Min(Math.Abs(input.X - output.X), 50);
+                var a = new PointF(output.X, (float) Scale(amount, 0, 1, output.Y, output.Y + d));
+                var b = new PointF(input.X, (float) Scale(amount, 0, 1, input.Y-d, input.Y));
 
                 var bas = Sat(Scale(amount, 0.1, 0.9, 0, 1));       
                 var cos = Math.Cos(bas*Math.PI);
@@ -127,11 +125,6 @@ namespace NodeEditor
         {
             double s = (x - a)/(b - a);
             return s*(d - c) + c;
-        }
-
-        public static float Lerp(float a, float b, float amount)
-        {
-            return a*(1f - amount) + b*amount;
         }
 
         public static PointF Lerp(PointF a, PointF b, float amount)
