@@ -92,8 +92,8 @@ namespace NodeEditor
             }
 
             var socketList = new List<SocketVisual>();
-            float curInputH = HeaderHeight + ComponentPadding;
-            float curOutputH = HeaderHeight + ComponentPadding;
+            float curInputH = HeaderHeight / 2;
+            float curOutputH = HeaderHeight / 2;
 
             var NodeWidth = GetNodeBounds().Width;
 
