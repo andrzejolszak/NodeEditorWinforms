@@ -27,7 +27,9 @@ namespace NodeEditor
 {
     internal class SocketVisual
     {
-        public const float SocketHeight = 16;
+        public const float SocketHeight = 8;
+
+        public const float SocketWidth = 16;
 
         public float X { get; set; }
         public float Y { get; set; }
@@ -48,30 +50,28 @@ namespace NodeEditor
         {            
             var socketRect = new RectangleF(X, Y, Width, Height);
             var hover = socketRect.Contains(mouseLocation);
-            var fontBrush = Brushes.Black;
 
             if (hover)
             {
-                socketRect.Inflate(4, 4);
-                fontBrush = Brushes.Blue;
-            }
+                g.SmoothingMode = SmoothingMode.HighSpeed;
+                g.InterpolationMode = InterpolationMode.Low;
 
-            g.SmoothingMode = SmoothingMode.HighSpeed;
-            g.InterpolationMode = InterpolationMode.Low;
-            
-            if (Input)
-            {
-                var sf = new StringFormat();
-                sf.Alignment = StringAlignment.Near;
-                sf.LineAlignment = StringAlignment.Center;                
-                g.DrawString(Name,SystemFonts.SmallCaptionFont, fontBrush, new RectangleF(X+Width+2,Y,1000,Height), sf);
-            }
-            else
-            {
-                var sf = new StringFormat();
-                sf.Alignment = StringAlignment.Far;
-                sf.LineAlignment = StringAlignment.Center;
-                g.DrawString(Name, SystemFonts.SmallCaptionFont, fontBrush, new RectangleF(X-1000, Y, 1000, Height), sf);
+                socketRect.Inflate(2, 0);
+                var fontBrush = Brushes.Blue;
+                if (Input)
+                {
+                    var sf = new StringFormat();
+                    sf.Alignment = StringAlignment.Near;
+                    sf.LineAlignment = StringAlignment.Center;
+                    g.DrawString(Name, SystemFonts.SmallCaptionFont, fontBrush, new RectangleF(X, Y - SocketHeight * 2, 1000, Height * 2), sf);
+                }
+                else
+                {
+                    var sf = new StringFormat();
+                    sf.Alignment = StringAlignment.Near;
+                    sf.LineAlignment = StringAlignment.Center;
+                    g.DrawString(Name, SystemFonts.SmallCaptionFont, fontBrush, new RectangleF(X, Y + SocketHeight, 1000, Height * 2), sf);
+                }
             }
 
             g.InterpolationMode = InterpolationMode.HighQualityBilinear;
@@ -83,7 +83,7 @@ namespace NodeEditor
             }
             else
             {
-                g.DrawImage(Resources.socket, socketRect);
+                g.FillRectangle(Brushes.Black, socketRect);
             }
         }
 

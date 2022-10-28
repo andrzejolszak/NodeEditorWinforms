@@ -127,35 +127,37 @@ namespace NodeEditor
                 curInputH += SocketVisual.SocketHeight + ComponentPadding;
             }
 
-            foreach (var input in GetInputs())
+            ParameterInfo[] inputs = GetInputs();
+            float len = inputs.Length > 1 ? inputs.Length - 1 : 1;
+            for (int i = 0; i < inputs.Length; i++)
             {
+                ParameterInfo input = inputs[i];
                 var socket = new SocketVisual();
                 socket.Type = input.ParameterType;
                 socket.Height = SocketVisual.SocketHeight;
                 socket.Name = input.Name;
-                socket.Width = SocketVisual.SocketHeight;
-                socket.X = X;
-                socket.Y = Y + curInputH;
+                socket.Width = SocketVisual.SocketWidth;
+                socket.X = X + i * ((NodeWidth - SocketVisual.SocketWidth) / len);
+                socket.Y = Y;
                 socket.Input = true;
 
                 socketList.Add(socket);
-
-                curInputH += SocketVisual.SocketHeight + ComponentPadding;
             }
             var ctx = GetNodeContext() as DynamicNodeContext;
-            foreach (var output in GetOutputs())
+            ParameterInfo[] outputs = GetOutputs();
+            len = outputs.Length > 1 ? outputs.Length - 1 : 1;
+            for (int i = 0; i < outputs.Length; i++)
             {
+                ParameterInfo output = outputs[i];
                 var socket = new SocketVisual();
                 socket.Type = output.ParameterType;
                 socket.Height = SocketVisual.SocketHeight;
                 socket.Name = output.Name;
-                socket.Width = SocketVisual.SocketHeight;
-                socket.X = X + NodeWidth - SocketVisual.SocketHeight;
+                socket.Width = SocketVisual.SocketWidth;
+                socket.X = X + i * ((NodeWidth - SocketVisual.SocketWidth) / len);
                 socket.Y = Y + curOutputH;
                 socket.Value = ctx[socket.Name];              
                 socketList.Add(socket);
-
-                curOutputH += SocketVisual.SocketHeight + ComponentPadding;
             }
 
             socketCache = socketList.ToArray();
