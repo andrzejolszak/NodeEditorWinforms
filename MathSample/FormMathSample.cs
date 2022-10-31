@@ -1,4 +1,5 @@
-﻿using System;
+﻿using NodeEditor;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -13,26 +14,37 @@ namespace MathSample
     public partial class FormMathSample : Form
     {
         //Context that will be used for our nodes
-        MathContext context = new MathContext();
+        MathContext context;
 
         public FormMathSample()
         {
             InitializeComponent();
+            this.context = new MathContext(x => this.controlNodeEditor.nodesControl.Execute(x));
         }
 
         private void FormMathSample_Load(object sender, EventArgs e)
         {
             //Context assignment
             controlNodeEditor.nodesControl.Context = context;
-            controlNodeEditor.nodesControl.OnNodeContextSelected += NodesControlOnOnNodeContextSelected; 
+            controlNodeEditor.nodesControl.OnNodeSelected += NodesControlOnOnNodeContextSelected; 
             
             //Loading sample from file
-            controlNodeEditor.nodesControl.Deserialize(File.ReadAllBytes("default.nds"));
+            controlNodeEditor.nodesControl.Deserialize(File.ReadAllBytes("..\\..\\default.nds"));
+
+            this.FormClosing += FormMathSample_FormClosing;
         }
 
-        private void NodesControlOnOnNodeContextSelected(object o)
+        private void FormMathSample_FormClosing(object sender, FormClosingEventArgs e)
         {
-            controlNodeEditor.propertyGrid.SelectedObject = o;
+            File.WriteAllBytes("..\\..\\default.nds", controlNodeEditor.nodesControl.Serialize());
+        }
+
+        private void NodesControlOnOnNodeContextSelected(NodeVisual o)
+        {
+            if (controlNodeEditor.nodesControl.IsRunMode && o.IsInteractive)
+            {
+                controlNodeEditor.nodesControl.Execute(o);
+            }
         }
     }
 }

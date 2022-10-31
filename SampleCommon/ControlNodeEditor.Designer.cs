@@ -32,7 +32,6 @@
             this.panel = new System.Windows.Forms.Panel();
             this.nodesControl = new NodeEditor.NodesControl();
             this.splitContainer2 = new System.Windows.Forms.SplitContainer();
-            this.propertyGrid = new System.Windows.Forms.PropertyGrid();
             this.buttonProcess = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
             this.splitContainer1.Panel1.SuspendLayout();
@@ -40,7 +39,6 @@
             this.splitContainer1.SuspendLayout();
             this.panel.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer2)).BeginInit();
-            this.splitContainer2.Panel1.SuspendLayout();
             this.splitContainer2.Panel2.SuspendLayout();
             this.splitContainer2.SuspendLayout();
             this.SuspendLayout();
@@ -89,24 +87,12 @@
             this.splitContainer2.Name = "splitContainer2";
             this.splitContainer2.Orientation = System.Windows.Forms.Orientation.Horizontal;
             // 
-            // splitContainer2.Panel1
-            // 
-            this.splitContainer2.Panel1.Controls.Add(this.propertyGrid);
-            // 
             // splitContainer2.Panel2
             // 
             this.splitContainer2.Panel2.Controls.Add(this.buttonProcess);
             this.splitContainer2.Size = new System.Drawing.Size(240, 485);
             this.splitContainer2.SplitterDistance = 336;
             this.splitContainer2.TabIndex = 0;
-            // 
-            // propertyGrid
-            // 
-            this.propertyGrid.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.propertyGrid.Location = new System.Drawing.Point(0, 0);
-            this.propertyGrid.Name = "propertyGrid";
-            this.propertyGrid.Size = new System.Drawing.Size(240, 336);
-            this.propertyGrid.TabIndex = 1;
             // 
             // buttonProcess
             // 
@@ -115,7 +101,7 @@
             this.buttonProcess.Name = "buttonProcess";
             this.buttonProcess.Size = new System.Drawing.Size(240, 23);
             this.buttonProcess.TabIndex = 0;
-            this.buttonProcess.Text = "Process";
+            this.buttonProcess.Text = "EditMode";
             this.buttonProcess.UseVisualStyleBackColor = true;
             this.buttonProcess.Click += new System.EventHandler(this.buttonProcess_Click);
             // 
@@ -131,7 +117,6 @@
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).EndInit();
             this.splitContainer1.ResumeLayout(false);
             this.panel.ResumeLayout(false);
-            this.splitContainer2.Panel1.ResumeLayout(false);
             this.splitContainer2.Panel2.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer2)).EndInit();
             this.splitContainer2.ResumeLayout(false);
@@ -145,7 +130,6 @@
         private System.Windows.Forms.Panel panel;
         public NodeEditor.NodesControl nodesControl;
         private System.Windows.Forms.SplitContainer splitContainer2;
-        public System.Windows.Forms.PropertyGrid propertyGrid;
         private System.Windows.Forms.Button buttonProcess;
     }
 }

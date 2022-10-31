@@ -52,18 +52,16 @@ namespace NodeEditor
         /// Current node position Y coordinate.
         /// </summary>
         public float Y { get; set; }
-        internal MethodInfo Type { get; set; }
+        internal MethodInfo MethodInf { get; set; }
         internal int Order { get; set; }
-        internal bool Callable { get; set; }
-        internal bool ExecInit { get; set; }
-        internal bool IsSelected { get; set; }
-        internal FeedbackType Feedback { get; set; }
-        private object nodeContext { get; set; } 
+        public bool IsInteractive { get; set; }
+        public bool IsSelected { get; set; }
+        public FeedbackType Feedback { get; set; }
+        public object nodeContext { get; set; } 
         public Control CustomEditor { get; internal set; }
-        internal string GUID = Guid.NewGuid().ToString();
-        internal Color NodeColor = Color.LightCyan;
-        public bool IsBackExecuted { get; internal set; }
-        private SocketVisual[] socketCache;
+        public string GUID = Guid.NewGuid().ToString();
+        public Color NodeColor = Color.LightCyan;
+        private List<SocketVisual> _socketsCache;
 
         /// <summary>
         /// Tag for various puposes - may be used freely.
@@ -84,59 +82,29 @@ namespace NodeEditor
             return GUID;
         }
 
-        internal SocketVisual[] GetSockets()
+        internal List<SocketVisual> GetSockets()
         {
-            if(socketCache!=null)
+            if(_socketsCache != null)
             {
-                return socketCache;
+                return _socketsCache;
             }
 
             var socketList = new List<SocketVisual>();
-            float curInputH = HeaderHeight / 2;
-            float curOutputH = HeaderHeight / 2;
 
             var NodeWidth = GetNodeBounds().Width;
-
-            if (Callable)
-            {
-                if (!ExecInit)
-                {
-                    socketList.Add(new SocketVisual()
-                    {
-                        Height = SocketVisual.SocketHeight,
-                        Name = "Enter",
-                        Type = typeof (ExecutionPath),
-                        IsMainExecution = true,
-                        Width = SocketVisual.SocketHeight,
-                        X = X,
-                        Y = Y + curInputH,
-                        Input = true
-                    });
-                }
-                socketList.Add(new SocketVisual()
-                {
-                    Height = SocketVisual.SocketHeight,
-                    Name = "Exit",
-                    IsMainExecution = true,
-                    Type = typeof (ExecutionPath),
-                    Width = SocketVisual.SocketHeight,
-                    X = X + NodeWidth - SocketVisual.SocketHeight,
-                    Y = Y + curOutputH
-                });
-            }
 
             ParameterInfo[] inputs = GetInputs();
             float len = inputs.Length > 1 ? inputs.Length - 1 : 1;
             for (int i = 0; i < inputs.Length; i++)
             {
                 ParameterInfo input = inputs[i];
-                var socket = new SocketVisual();
+                var socket = new SocketVisual(this);
                 socket.Type = input.ParameterType;
                 socket.Height = SocketVisual.SocketHeight;
                 socket.Name = input.Name;
                 socket.Width = SocketVisual.SocketWidth;
-                socket.X = X + i * ((NodeWidth - SocketVisual.SocketWidth) / len);
-                socket.Y = Y;
+                socket.DX = i * ((NodeWidth - SocketVisual.SocketWidth) / len);
+                socket.DY = 0;
                 socket.Input = true;
 
                 socketList.Add(socket);
@@ -147,24 +115,19 @@ namespace NodeEditor
             for (int i = 0; i < outputs.Length; i++)
             {
                 ParameterInfo output = outputs[i];
-                var socket = new SocketVisual();
+                var socket = new SocketVisual(this);
                 socket.Type = output.ParameterType;
                 socket.Height = SocketVisual.SocketHeight;
                 socket.Name = output.Name;
                 socket.Width = SocketVisual.SocketWidth;
-                socket.X = X + i * ((NodeWidth - SocketVisual.SocketWidth) / len);
-                socket.Y = Y + HeaderHeight - SocketVisual.SocketHeight;
+                socket.DX = i * ((NodeWidth - SocketVisual.SocketWidth) / len);
+                socket.DY = HeaderHeight - SocketVisual.SocketHeight;
                 socket.Value = ctx[socket.Name];              
                 socketList.Add(socket);
             }
 
-            socketCache = socketList.ToArray();
-            return socketCache;
-        }
-
-        internal void DiscardCache()
-        {
-            socketCache = null;
+            _socketsCache = socketList;
+            return _socketsCache;
         }
 
         /// <summary>
@@ -226,12 +189,12 @@ namespace NodeEditor
 
         internal ParameterInfo[] GetInputs()
         {
-            return Type.GetParameters().Where(x => !x.IsOut).ToArray();
+            return MethodInf.GetParameters().Where(x => !x.IsOut).ToArray();
         }
 
         internal ParameterInfo[] GetOutputs()
         {
-            return Type.GetParameters().Where(x => x.IsOut).ToArray();
+            return MethodInf.GetParameters().Where(x => x.IsOut).ToArray();
         }
 
         /// <summary>
@@ -311,6 +274,11 @@ namespace NodeEditor
             g.DrawRectangle(Pens.Gray, Rectangle.Round(caption));
             g.DrawRectangle(Pens.Black, Rectangle.Round(rect));
 
+            if (this.IsInteractive)
+            {
+                g.DrawLine(Pens.Black, rect.X + rect.Width - 5, rect.Y, rect.X + rect.Width - 5, rect.Y + rect.Height);
+            }
+
             g.DrawString(Name, SystemFonts.DefaultFont, Brushes.Black, new PointF(X + 3, Y + HeaderHeight/4));       
 
             var sockets = GetSockets();
@@ -320,16 +288,16 @@ namespace NodeEditor
             }
         }
 
-        internal void Execute(INodesContext context)
+        public void Execute(INodesContext context)
         {
             context.CurrentProcessingNode = this;
 
             var dc = (GetNodeContext() as DynamicNodeContext);
-            var parametersDict = Type.GetParameters().OrderBy(x => x.Position).ToDictionary(x => x.Name, x => dc[x.Name]);
+            var parametersDict = MethodInf.GetParameters().OrderBy(x => x.Position).ToDictionary(x => x.Name, x => dc[x.Name]);
             var parameters = parametersDict.Values.ToArray();
 
             int ndx = 0;
-            Type.Invoke(context, parameters);
+            MethodInf.Invoke(context, parameters);
             foreach (var kv in parametersDict.ToArray())
             {
                 parametersDict[kv.Key] = parameters[ndx];

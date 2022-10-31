@@ -47,7 +47,7 @@ namespace NodeEditor
         /// <summary>
         /// If true, the node is able to be executed during execution process (will have exec input and output socket).
         /// </summary>
-        public bool IsCallable { get; set; }
+        public bool IsInteractive { get; set; }
 
         /// <summary>
         /// Name of the node that will be displayed in the node caption.
@@ -58,11 +58,6 @@ namespace NodeEditor
         /// Description that should tell more precisely what the node is performing.
         /// </summary>
         public string Description { get; set; }
-
-        /// <summary>
-        /// If true the node will be the start point of the execution.
-        /// </summary>
-        public bool IsExecutionInitiator { get; set; }
 
         /// <summary>
         /// Given type should be subclass of System.Windows.Forms.Control, and represents what will be displayed in the middle of the node.
@@ -91,22 +86,21 @@ namespace NodeEditor
         /// <param name="menu">Where should be node menuitem located - don't set if it should be in the main menu level.</param>
         /// <param name="category">Optional category for the node.</param>
         /// <param name="description">Description that should tell more precisely what the node is performing.</param>
-        /// <param name="isCallable">If true, the node is able to be executed during execution process (will have exec input and output socket).</param>
+        /// <param name="isInteractive">If true, the node is able to be executed during execution process (will have exec input and output socket).</param>
         /// <param name="isExecutionInitiator">If true the node will be the start point of the execution.</param>
         /// <param name="customEditor">Given type should be subclass of System.Windows.Forms.Control, and represents what will be displayed in the middle of the node.</param>
         /// <param name="xmlExportName">Name that will be used in the xml export of the graph.</param>
         /// <param name="width">Width of single node, or Auto if not determined</param>
         /// <param name="height">Height of single node, or Auto if not determined</param>
         public NodeAttribute(string name = "Node", string menu = "", string category = "General",
-            string description = "Some node.", bool isCallable = true, bool isExecutionInitiator = false, Type customEditor = null, string xmlExportName = "",
+            string description = "Some node.", bool isInteractive = false, Type customEditor = null, string xmlExportName = "",
             int width = Auto, int height = Auto)
         {
             Name = name;
             Menu = menu;
             Category = category;
             Description = description;
-            IsCallable = isCallable;
-            IsExecutionInitiator = isExecutionInitiator;
+            IsInteractive = isInteractive;
             CustomEditor = customEditor;
             XmlExportName = xmlExportName;
             Width = width;

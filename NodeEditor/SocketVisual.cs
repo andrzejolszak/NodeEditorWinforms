@@ -25,30 +25,35 @@ using System.Windows.Forms;
 
 namespace NodeEditor
 {
-    internal class SocketVisual
+    public class SocketVisual
     {
         public const float SocketHeight = 8;
 
         public const float SocketWidth = 16;
 
-        public float X { get; set; }
-        public float Y { get; set; }
+        public SocketVisual(NodeVisual nodeVisual)
+        {
+            this.ParentNode = nodeVisual;
+        }
+
+        public float DX { get; set; }
+        public float DY { get; set; }
+
         public float Width { get; set; }
         public float Height { get; set; }
         public string Name { get; set; }
         public Type Type { get; set; }
         public bool Input { get; set; }
         public object Value { get; set; }
-        public bool IsMainExecution { get; set; }
 
-        public bool IsExecution
-        {
-            get { return Type.Name.Replace("&", "") == typeof (ExecutionPath).Name; }
-        }
+        public NodeVisual ParentNode { get; }
 
         public void Draw(Graphics g, Point mouseLocation, MouseButtons mouseButtons)
-        {            
-            var socketRect = new RectangleF(X, Y, Width, Height);
+        {
+            float x = this.ParentNode.X + DX;
+            float y = this.ParentNode.Y + DY;
+
+            var socketRect = new RectangleF(x, y, Width, Height);
             var hover = socketRect.Contains(mouseLocation);
 
             if (hover)
@@ -63,33 +68,27 @@ namespace NodeEditor
                     var sf = new StringFormat();
                     sf.Alignment = StringAlignment.Near;
                     sf.LineAlignment = StringAlignment.Center;
-                    g.DrawString(Name, SystemFonts.SmallCaptionFont, fontBrush, new RectangleF(X, Y - SocketHeight * 2, 1000, Height * 2), sf);
+                    g.DrawString(Name + ":" + Value, SystemFonts.SmallCaptionFont, fontBrush, new RectangleF(x, y - SocketHeight * 2, 1000, Height * 2), sf);
                 }
                 else
                 {
                     var sf = new StringFormat();
                     sf.Alignment = StringAlignment.Near;
                     sf.LineAlignment = StringAlignment.Center;
-                    g.DrawString(Name, SystemFonts.SmallCaptionFont, fontBrush, new RectangleF(X, Y + SocketHeight, 1000, Height * 2), sf);
+                    g.DrawString(Name + ":" + Value, SystemFonts.SmallCaptionFont, fontBrush, new RectangleF(x, y + SocketHeight, 1000, Height * 2), sf);
                 }
             }
 
             g.InterpolationMode = InterpolationMode.HighQualityBilinear;
             g.SmoothingMode = SmoothingMode.HighQuality;
 
-            if (IsExecution)
-            {
-                g.DrawImage(Resources.exec, socketRect);
-            }
-            else
-            {
-                g.FillRectangle(Brushes.Black, socketRect);
-            }
+            g.FillRectangle(this.Value == null ? Brushes.DarkGray : Brushes.Black, socketRect);
+            g.DrawString(Type.Name.Substring(0, 1).ToLowerInvariant(), SystemFonts.SmallCaptionFont, Brushes.White, new RectangleF(x + 2, y - 6, Width * 2, Height * 2));
         }
 
         public RectangleF GetBounds()
         {
-            return new RectangleF(X, Y, Width, Height);
+            return new RectangleF(this.ParentNode.X + DX, this.ParentNode.Y + DY, Width, Height);
         }
     }
 }

@@ -38,10 +38,5 @@ namespace NodeEditor
         {
             get { return InputNode.GetSockets().FirstOrDefault(x => x.Name == InputSocketName); }
         }
-
-        public bool IsExecution
-        {
-            get { return OutputSocket.IsExecution; }
-        }
     }
 }

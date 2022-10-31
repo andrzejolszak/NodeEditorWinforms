@@ -18,7 +18,7 @@ namespace SampleCommon
 
         private void buttonProcess_Click(object sender, EventArgs e)
         {
-            nodesControl.Execute();            
+            nodesControl.ToggleRunMode();            
         }
     }
 }

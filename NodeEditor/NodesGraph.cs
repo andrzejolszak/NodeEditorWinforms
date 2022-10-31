@@ -45,19 +45,7 @@ namespace NodeEditor
             var cpen = Pens.Black;
             var epen = new Pen(Color.Gold, 3);
             var epen2 = new Pen(Color.Black, 5);
-            foreach (var connection in Connections.Where(x=>x.IsExecution))
-            {
-                var osoc = connection.OutputNode.GetSockets().FirstOrDefault(x => x.Name == connection.OutputSocketName);
-                var beginSocket = osoc.GetBounds();
-                var isoc = connection.InputNode.GetSockets().FirstOrDefault(x => x.Name == connection.InputSocketName);
-                var endSocket = isoc.GetBounds();
-                var begin = beginSocket.Location + new SizeF(beginSocket.Width / 2f, beginSocket.Height / 2f);
-                var end = endSocket.Location + new SizeF(endSocket.Width / 2f, endSocket.Height / 2f);                               
-
-                DrawConnection(g, epen2, begin, end);
-                DrawConnection(g, epen, begin, end);                
-            }
-            foreach (var connection in Connections.Where(x => !x.IsExecution))
+            foreach (var connection in Connections)
             {
                 var osoc = connection.OutputNode.GetSockets().FirstOrDefault(x => x.Name == connection.OutputSocketName);
                 var beginSocket = osoc.GetBounds();

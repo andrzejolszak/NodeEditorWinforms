@@ -45,8 +45,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="DynamicNodeContext.cs" />
-    <Compile Include="DynamicNodeContextConverter.cs" />
-    <Compile Include="ExecutionPath.cs" />
     <Compile Include="FeedbackType.cs" />
     <Compile Include="INodesContext.cs" />
     <Compile Include="NodeAttribute.cs" />
