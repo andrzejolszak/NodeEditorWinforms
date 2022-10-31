@@ -203,7 +203,7 @@ namespace NodeEditor
         public SizeF GetNodeBounds()
         {
             var csize = new SizeF();
-            if (CustomEditor != null)
+            if (CustomEditor != null && CustomEditor.ClientSize != default)
             {
                 csize = new SizeF(CustomEditor.ClientSize.Width + 2 + 80 +SocketVisual.SocketHeight*2,
                     CustomEditor.ClientSize.Height + HeaderHeight + 8);                
@@ -306,7 +306,6 @@ namespace NodeEditor
 
             var outs = GetSockets();
 
-            
             foreach (var parameter in dc.ToArray())
             {
                 dc[parameter] = parametersDict[parameter];

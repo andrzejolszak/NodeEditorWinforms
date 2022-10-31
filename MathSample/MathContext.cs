@@ -32,6 +32,12 @@ namespace MathSample
             outValue = inValue;
         }
 
+        [Node("Time", "Input", "Basic", "Allows to output a simple value.")]
+        public void Time(bool bang, out string outValue)
+        {
+            outValue = DateTime.UtcNow.ToLongTimeString();
+        }
+
         [Node("Add","Operators","Basic","Adds two input values.")]
         public void Add(float a, float b, out float result, out int sign)
         {
@@ -57,10 +63,11 @@ namespace MathSample
             result = a / b;
         }
 
-        [Node("Show Value","Helper","Basic","Shows input value in the message box")]
+        [Node("Show Value","Helper","Basic","Shows input value in the message box", customEditor: typeof(Label))]
         public void ShowMessageBox(object bang, object x)
         {
-            MessageBox.Show(x.ToString(), "Show Value", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            this.CurrentProcessingNode.CustomEditor.Text = x.ToString();
+           // MessageBox.Show(x.ToString(), "Show Value", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         [Node("Bang", "Helper","Basic","Starts execution", true)]
@@ -81,13 +88,8 @@ namespace MathSample
         }
     }
 
-    public class LoadBang : Label
+    public class LoadBang : Control
     {
-        public LoadBang()
-        {
-            this.Text = "LoadBang";
-        }
-
         protected override void OnHandleCreated(EventArgs e)
         {
             base.OnHandleCreated(e);

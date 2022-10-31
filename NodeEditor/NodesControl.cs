@@ -651,15 +651,14 @@ namespace NodeEditor
 
                     // PullResolve(init);
                     init.Execute(Context);
-                    
-                    // TODO: redo this for bang
-                    var connection = graph.Connections.FirstOrDefault(x => x.OutputNode == init && x.OutputSocket.Value != null);
-                    if (connection == null)
+
+                    foreach (var connection in graph.Connections)
                     {
-                        connection = graph.Connections.FirstOrDefault(x => x.OutputNode == init);
+                        var dcIn = (connection.InputNode.GetNodeContext() as DynamicNodeContext);
+                        dcIn[connection.InputSocketName] = connection.OutputSocket.Value;
                     }
 
-                    if (connection != null)
+                    foreach (var connection in graph.Connections.Where(x => x.OutputNode == init && x.OutputSocket.Value != null))
                     {
                         nodeQueue.Enqueue(connection.InputNode);
                     }
@@ -942,8 +941,15 @@ namespace NodeEditor
 
             if (customEditor != "")
             {
-                nv.CustomEditor =
-                    Activator.CreateInstance(AppDomain.CurrentDomain, customEditorAssembly, customEditor).Unwrap() as Control;
+                if (customEditor == "System.Windows.Forms.Label")
+                {
+                    nv.CustomEditor = new Label();
+                }
+                else
+                {
+                    nv.CustomEditor =
+                        Activator.CreateInstance(AppDomain.CurrentDomain, customEditorAssembly, customEditor).Unwrap() as Control;
+                }
 
                 Control ctrl = nv.CustomEditor;
                 if (ctrl != null)
