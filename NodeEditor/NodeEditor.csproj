@@ -44,6 +44,23 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Autocomplete\AutocompleteItem.cs" />
+    <Compile Include="Autocomplete\AutocompleteItems.cs" />
+    <Compile Include="Autocomplete\AutocompleteListView.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Autocomplete\AutocompleteMenu.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Autocomplete\AutocompleteMenuHost.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Autocomplete\Colors.cs" />
+    <Compile Include="Autocomplete\EventArgs.cs" />
+    <Compile Include="Autocomplete\IAutocompleteListView.cs" />
+    <Compile Include="Autocomplete\ITextBoxWrapper.cs" />
+    <Compile Include="Autocomplete\Range.cs" />
+    <Compile Include="Autocomplete\TextBoxWrapper.cs" />
     <Compile Include="DynamicNodeContext.cs" />
     <Compile Include="FeedbackType.cs" />
     <Compile Include="INodesContext.cs" />
@@ -66,6 +83,9 @@
     <Compile Include="SocketVisual.cs" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Autocomplete\AutocompleteMenu.resx">
+      <DependentUpon>AutocompleteMenu.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="NodesControl.resx">
       <DependentUpon>NodesControl.cs</DependentUpon>
     </EmbeddedResource>
