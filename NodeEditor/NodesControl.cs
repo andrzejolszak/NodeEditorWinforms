@@ -351,7 +351,7 @@ namespace NodeEditor
             var otype = Type.GetType(output.Type.FullName.Replace("&", ""), AssemblyResolver, TypeResolver);
             var itype = Type.GetType(input.Type.FullName.Replace("&", ""), AssemblyResolver, TypeResolver);
             if (otype == null || itype == null) return false;
-            var allow = otype == itype || otype.IsSubclassOf(itype);
+            var allow = otype == typeof(Bang) || otype == itype || otype.IsSubclassOf(itype);
             return allow;
         }
 
@@ -465,6 +465,11 @@ namespace NodeEditor
 
         private void NodesControl_DoubleMouseClick(object sender, MouseEventArgs e)
         {
+            if (IsRunMode)
+            {
+                return;
+            }
+
             var nv = new NodeVisual();
             nv.X = lastMouseLocation.X;
             nv.Y = lastMouseLocation.Y;

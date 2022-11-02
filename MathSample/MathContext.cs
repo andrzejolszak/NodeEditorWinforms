@@ -29,7 +29,7 @@ namespace MathSample
         [Node("Value", "Input", "Basic", "Allows to output a simple value.")]
         public void InputValue(float inValue, out float outValue)
         {
-            outValue = inValue;
+            outValue = inValue == 0 ? 32 : inValue;
         }
 
         [Node("Time", "Input", "Basic", "Allows to output a simple value.")]
