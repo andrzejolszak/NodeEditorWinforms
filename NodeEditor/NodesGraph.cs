@@ -15,20 +15,30 @@
  * OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+using Supercluster.KDTree;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace NodeEditor
 {
     internal class NodesGraph
     {
+        private const int HoverThrottlingMs = 10;
         internal List<NodeVisual> Nodes = new List<NodeVisual>();
         internal List<NodeConnection> Connections = new List<NodeConnection>();
+        internal KDTree<float, NodeConnection> KdTree = null;
+        private List<(NodeConnection, PointF[])> _points = new List<(NodeConnection, PointF[])>();
+        private float _pointsChecksum = 0;
+        private bool _treeRecalc = false;
+        private bool _hoverRecalc = false;
+        private NodeConnection _hoverConnection;
 
         public void Draw(Graphics g, Point mouseLocation, MouseButtons mouseButtons)
         {
@@ -42,20 +52,64 @@ namespace NodeEditor
 
             g.FillRectangle(new SolidBrush(Color.FromArgb(200, Color.White)), g.ClipBounds);
 
+            if (KdTree != null && !_hoverRecalc)
+            {
+                _hoverRecalc = true;
+                Task.Run(() =>
+                {
+                    _hoverConnection = KdTree.RadialSearch(new float[] { mouseLocation.X, mouseLocation.Y }, 50, 1).FirstOrDefault()?.Item2;
+                    Task.Delay(HoverThrottlingMs);
+                    _hoverRecalc = false;
+                });
+            }
+
+            _points.Clear();
+
             var cpen = Pens.Black;
             var epen = new Pen(Color.Gold, 3);
-            var epen2 = new Pen(Color.Black, 5);
-            foreach (var connection in Connections)
+            var epen2 = new Pen(Color.Black, 2);
+            // epen2.StartCap = LineCap.ArrowAnchor;
+
+            for (int i = 0; i < this.Connections.Count; i++)
             {
+                NodeConnection connection = this.Connections[i];
                 var osoc = connection.OutputNode.GetSockets().FirstOrDefault(x => x.Name == connection.OutputSocketName);
                 var beginSocket = osoc.GetBounds();
                 var isoc = connection.InputNode.GetSockets().FirstOrDefault(x => x.Name == connection.InputSocketName);
                 var endSocket = isoc.GetBounds();
                 var begin = beginSocket.Location + new SizeF(beginSocket.Width / 2f, beginSocket.Height);
                 var end = endSocket.Location + new SizeF(endSocket.Width / 2f, 0f);
-                
-                DrawConnection(g, cpen, begin, end);
-               
+
+                bool isHover = connection == _hoverConnection;
+                PointF[] points = DrawConnection(g, isHover ? epen2 : cpen, begin, end);
+                _points.Add((connection, points));
+            }
+
+            float newChecksum = this._points.SelectMany(x => x.Item2).Sum(x => x.X);
+            if (newChecksum != _pointsChecksum && !_treeRecalc)
+            {
+                _treeRecalc = true;
+                _pointsChecksum = newChecksum;
+                Task.Run(() =>
+                {
+                    (NodeConnection, PointF[])[] pointsCopy = _points.ToArray();
+                    float[][] points = pointsCopy.SelectMany(x => x.Item2.Select(y => (x.Item1, new float[] { y.X, y.Y }))).Select(x => x.Item2).ToArray();
+                    NodeConnection[] conns = pointsCopy.SelectMany(x => x.Item2.Select(y => (x.Item1, new float[] { y.X, y.Y }))).Select(x => x.Item1).ToArray();
+                    KdTree = new KDTree<float, NodeConnection>(2, points, conns, (x, y) =>
+                    {
+                        float dist = 0f;
+                        for (int i = 0; i < x.Length; i++)
+                        {
+                            dist += (x[i] - y[i]) * (x[i] - y[i]);
+                        }
+
+                        return dist;
+                    });
+
+                    Task.Delay(HoverThrottlingMs);
+
+                    _treeRecalc = false;
+                });
             }
 
             var orderedNodes = Nodes.OrderByDescending(x => x.Order);
@@ -65,12 +119,14 @@ namespace NodeEditor
             }
         }
 
-        public static void DrawConnection(Graphics g, Pen pen, PointF output, PointF input)
+        public static PointF[] DrawConnection(Graphics g, Pen pen, PointF output, PointF input)
         {
             g.InterpolationMode = InterpolationMode.HighQualityBilinear;
             g.SmoothingMode = SmoothingMode.HighQuality;
 
-            if (input == output) return;
+            if (input == output)
+                return new PointF[0];
+
             const int interpolation = 48;
 
             PointF[] points = new PointF[interpolation];
@@ -82,7 +138,7 @@ namespace NodeEditor
                 var a = new PointF(output.X, (float) Scale(amount, 0, 1, output.Y, output.Y + d));
                 var b = new PointF(input.X, (float) Scale(amount, 0, 1, input.Y-d, input.Y));
 
-                var bas = Sat(Scale(amount, 0.1, 0.9, 0, 1));       
+                var bas = Sat(Scale(amount, 0, 1, 0, 1));       
                 var cos = Math.Cos(bas*Math.PI);
                 if (cos < 0)
                 {
@@ -92,13 +148,21 @@ namespace NodeEditor
                 {
                     cos = Math.Pow(cos, 0.2);
                 }
-                amount = (float)cos * -0.5f + 0.5f;
+
+                // amount = (float)cos * -0.5f + 0.5f;
 
                 var f = Lerp(a, b, amount);
                 points[i] = f;
+
+                if (i > 0 && pen.StartCap == LineCap.ArrowAnchor)
+                {
+                    g.DrawLine(pen, points[i-1], points[i]);
+                }
             }
 
             g.DrawLines(pen, points);
+
+            return points;
         }
 
         public static double Sat(double x)

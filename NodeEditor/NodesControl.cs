@@ -461,6 +461,96 @@ namespace NodeEditor
             }
         }
 
+        public MethodInfo DummyMethod() => MethodInfo.GetCurrentMethod() as MethodInfo;
+
+        private void NodesControl_DoubleMouseClick(object sender, MouseEventArgs e)
+        {
+            var nv = new NodeVisual();
+            nv.X = lastMouseLocation.X;
+            nv.Y = lastMouseLocation.Y;
+            nv.MethodInf = this.DummyMethod();
+            nv.IsInteractive = false;
+            nv.Name = NodeVisual.NewName;
+            nv.Order = graph.Nodes.Count;
+            nv.XmlExportName = "";
+            nv.CustomWidth = -1;
+            nv.CustomHeight = -1;
+
+            TextBox tb = new TextBox();
+            tb.Width = (int)NodeVisual.NodeWidth - 2;
+            tb.Height = (int)NodeVisual.HeaderHeight - 2;
+            tb.KeyPress += (s, ee) =>
+            {
+                if (ee.KeyChar == (char)Keys.Enter)
+                {
+                    SwapNode();
+                }
+            };
+
+            nv.CustomEditor = tb;
+            nv.CustomEditor.Tag = (nv, this.context);
+            Controls.Add(nv.CustomEditor);
+            nv.LayoutEditor();
+
+            AutocompleteMenuNS.AutocompleteMenu autocompleteMenu = new AutocompleteMenuNS.AutocompleteMenu();
+            autocompleteMenu.Items = Context.GetType().GetMethods().Where(x => x.GetCustomAttributes(typeof(NodeAttribute), false).Any()).Select(x => x.Name.ToLowerInvariant()).ToArray();
+            autocompleteMenu.SetAutocompleteMenu(tb, autocompleteMenu);
+            autocompleteMenu.Selected += (_, eee) => SwapNode();
+
+            graph.Nodes.Add(nv);
+            Refresh();
+            needRepaint = true;
+
+            void SwapNode()
+            {
+                var methods = Context.GetType().GetMethods();
+                MethodInfo info = methods.SingleOrDefault(x => x.Name.Equals(tb.Text, StringComparison.InvariantCultureIgnoreCase));
+                if (info is null)
+                {
+                    return;
+                }
+
+                NodeAttribute attrib = info.GetCustomAttributes(typeof(NodeAttribute), false)
+                    .Cast<NodeAttribute>()
+                    .FirstOrDefault();
+                if (attrib is null)
+                {
+                    return;
+                }
+
+                var nv2 = new NodeVisual();
+                nv2.X = nv.X;
+                nv2.Y = nv.Y;
+                nv2.MethodInf = info;
+                nv2.IsInteractive = attrib.IsInteractive;
+                nv2.Name = attrib.Name;
+                nv2.Order = graph.Nodes.Count;
+                nv2.XmlExportName = attrib.XmlExportName;
+                nv2.CustomWidth = attrib.Width;
+                nv2.CustomHeight = attrib.Height;
+
+                Controls.Remove(tb);
+                graph.Nodes.Remove(nv);
+
+                if (attrib.CustomEditor != null)
+                {
+                    Control ctrl = null;
+                    nv2.CustomEditor = ctrl = Activator.CreateInstance(attrib.CustomEditor) as Control;
+                    if (ctrl != null)
+                    {
+                        ctrl.Tag = (nv2, this.context);
+                        Controls.Add(ctrl);
+                    }
+                    nv2.LayoutEditor();
+                }
+
+                graph.Nodes.Add(nv2);
+
+                Refresh();
+                needRepaint = true;
+            }
+        }
+
         private void NodesControl_MouseClick(object sender, MouseEventArgs e)
         {
             lastMouseLocation = e.Location;
@@ -654,13 +744,21 @@ namespace NodeEditor
 
                     foreach (var connection in graph.Connections)
                     {
-                        var dcIn = (connection.InputNode.GetNodeContext() as DynamicNodeContext);
+                        if (connection.OutputNode != init || connection.OutputSocket.Value is Bang)
+                        {
+                            continue;
+                        }
+
+                        var dcIn = connection.InputNode.GetNodeContext() as DynamicNodeContext;
                         dcIn[connection.InputSocketName] = connection.OutputSocket.Value;
                     }
 
                     foreach (var connection in graph.Connections.Where(x => x.OutputNode == init && x.OutputSocket.Value != null))
                     {
-                        nodeQueue.Enqueue(connection.InputNode);
+                        if (connection.InputSocket.HotInput)
+                        {
+                            nodeQueue.Enqueue(connection.InputNode);
+                        }
                     }
                 }
             }
@@ -829,9 +927,6 @@ namespace NodeEditor
                 bw.Write(node.CustomEditor.GetType().FullName);
             }
             bw.Write(node.MethodInf.Name);
-            var context = (node.GetNodeContext() as DynamicNodeContext).Serialize();
-            bw.Write(context.Length);
-            bw.Write(context);
             bw.Write(8); //additional data size per node
             bw.Write(node.Int32Tag);
             bw.Write(node.NodeColor.ToArgb());
@@ -924,7 +1019,6 @@ namespace NodeEditor
                 nv.CustomHeight = attribute.Height;
             }
 
-            (nv.GetNodeContext() as DynamicNodeContext).Deserialize(br.ReadBytes(br.ReadInt32()));
             var additional = br.ReadInt32(); //read additional data
             if (additional >= 4)
             {
@@ -944,6 +1038,10 @@ namespace NodeEditor
                 if (customEditor == "System.Windows.Forms.Label")
                 {
                     nv.CustomEditor = new Label();
+                }
+                else if (customEditor == "System.Windows.Forms.TextBox")
+                {
+                    nv.CustomEditor = new TextBox();
                 }
                 else
                 {
@@ -973,5 +1071,10 @@ namespace NodeEditor
             Refresh();
             rebuildConnectionDictionary = true;
         }
+    }
+
+    public class Bang
+    {
+        public static Bang Instance = new Bang();
     }
 }

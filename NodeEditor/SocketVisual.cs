@@ -44,6 +44,8 @@ namespace NodeEditor
         public string Name { get; set; }
         public Type Type { get; set; }
         public bool Input { get; set; }
+        public bool HotInput { get; set; }
+
         public object Value { get; set; }
 
         public NodeVisual ParentNode { get; }

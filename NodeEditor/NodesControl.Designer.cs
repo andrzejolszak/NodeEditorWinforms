@@ -42,6 +42,7 @@
             this.MouseDown += new System.Windows.Forms.MouseEventHandler(this.NodesControl_MouseDown);
             this.MouseMove += new System.Windows.Forms.MouseEventHandler(this.NodesControl_MouseMove);
             this.MouseUp += new System.Windows.Forms.MouseEventHandler(this.NodesControl_MouseUp);
+            this.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.NodesControl_DoubleMouseClick);
             this.ResumeLayout(false);
 
         }

@@ -71,15 +71,15 @@ namespace MathSample
         }
 
         [Node("Bang", "Helper","Basic","Starts execution", true)]
-        public void Bang(out bool bang)
+        public void Bang(out Bang bang)
         {
-            bang = true;
+            bang = NodeEditor.Bang.Instance;
         }
 
         [Node("LoadBang", "Helper", "Basic", "Starts execution", false, typeof(LoadBang))]
-        public void LoadBang(out bool bang)
+        public void LoadBang(out Bang bang)
         {
-            bang = true;
+            bang = NodeEditor.Bang.Instance;
         }
 
         public void OnRunModeToggled(bool isRunMode)

@@ -34,6 +34,7 @@ namespace NodeEditor
     /// </summary>
     public class NodeVisual
     {
+        public const string NewName = "*new*";
         public const float NodeWidth = 140;
         public const float HeaderHeight = 32;
         public const float ComponentPadding = 2;
@@ -106,6 +107,7 @@ namespace NodeEditor
                 socket.DX = i * ((NodeWidth - SocketVisual.SocketWidth) / len);
                 socket.DY = 0;
                 socket.Input = true;
+                socket.HotInput = i == 0;
 
                 socketList.Add(socket);
             }
@@ -203,7 +205,7 @@ namespace NodeEditor
         public SizeF GetNodeBounds()
         {
             var csize = new SizeF();
-            if (CustomEditor != null && CustomEditor.ClientSize != default)
+            if (CustomEditor != null && CustomEditor.ClientSize != default && this.Name != NewName)
             {
                 csize = new SizeF(CustomEditor.ClientSize.Width + 2 + 80 +SocketVisual.SocketHeight*2,
                     CustomEditor.ClientSize.Height + HeaderHeight + 8);                
@@ -279,7 +281,10 @@ namespace NodeEditor
                 g.DrawLine(Pens.Black, rect.X + rect.Width - 5, rect.Y, rect.X + rect.Width - 5, rect.Y + rect.Height);
             }
 
-            g.DrawString(Name, SystemFonts.DefaultFont, Brushes.Black, new PointF(X + 3, Y + HeaderHeight/4));       
+            if (this.Name != NewName)
+            {
+                g.DrawString(Name, SystemFonts.DefaultFont, Brushes.Black, new PointF(X + 3, Y + HeaderHeight / 4));
+            }
 
             var sockets = GetSockets();
             foreach (var socet in sockets)
@@ -322,7 +327,14 @@ namespace NodeEditor
         {
             if (CustomEditor != null)
             {
-                CustomEditor.Location = new Point((int)( X + 1 + 40 + SocketVisual.SocketHeight), (int) (Y + HeaderHeight + 4));
+                if (this.Name == NewName)
+                {
+                    CustomEditor.Location = new Point((int)X + 1, (int)Y + 1);
+                }
+                else
+                {
+                    CustomEditor.Location = new Point((int)(X + 1 + 40 + SocketVisual.SocketHeight), (int)(Y + HeaderHeight + 4));
+                }
             }
         }
     }
