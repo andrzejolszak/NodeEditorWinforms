@@ -23,6 +23,7 @@ using System.Dynamic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
@@ -62,7 +63,9 @@ namespace NodeEditor
         public Control CustomEditor { get; internal set; }
         public string GUID = Guid.NewGuid().ToString();
         public Color NodeColor = Color.LightCyan;
-        private List<SocketVisual> _socketsCache;
+        private List<SocketVisual> _inputSocketsCache;
+        private List<SocketVisual> _outputSocketsCache;
+        private List<SocketVisual> _allSocketsOrdered;
 
         /// <summary>
         /// Tag for various puposes - may be used freely.
@@ -83,120 +86,79 @@ namespace NodeEditor
             return GUID;
         }
 
-        internal List<SocketVisual> GetSockets()
+        internal (List<SocketVisual> Inputs, List<SocketVisual> Outputs, List<SocketVisual> All) GetSockets()
         {
-            if(_socketsCache != null)
+            if(_allSocketsOrdered != null)
             {
-                return _socketsCache;
+                return (_inputSocketsCache, _outputSocketsCache, _allSocketsOrdered);
             }
 
-            var socketList = new List<SocketVisual>();
+            var inputSocketList = new List<SocketVisual>();
+            var outputSocketList = new List<SocketVisual>();
+            var allSocketsList = new List<SocketVisual>();
 
             var NodeWidth = GetNodeBounds().Width;
 
-            ParameterInfo[] inputs = GetInputs();
-            float len = inputs.Length > 1 ? inputs.Length - 1 : 1;
-            for (int i = 0; i < inputs.Length; i++)
+            ParameterInfo[] parms = MethodInf.GetParameters().OrderBy(x => x.Position).ToArray();
+            for (int i = 0; i < parms.Length; i++)
             {
-                ParameterInfo input = inputs[i];
-                var socket = new SocketVisual(this);
-                socket.Type = input.ParameterType;
-                socket.Height = SocketVisual.SocketHeight;
-                socket.Name = input.Name;
-                socket.Width = SocketVisual.SocketWidth;
-                socket.DX = i * ((NodeWidth - SocketVisual.SocketWidth) / len);
-                socket.DY = 0;
-                socket.Input = true;
-                socket.HotInput = i == 0;
-
-                socketList.Add(socket);
-            }
-            var ctx = GetNodeContext() as DynamicNodeContext;
-            ParameterInfo[] outputs = GetOutputs();
-            len = outputs.Length > 1 ? outputs.Length - 1 : 1;
-            for (int i = 0; i < outputs.Length; i++)
-            {
-                ParameterInfo output = outputs[i];
-                var socket = new SocketVisual(this);
-                socket.Type = output.ParameterType;
-                socket.Height = SocketVisual.SocketHeight;
-                socket.Name = output.Name;
-                socket.Width = SocketVisual.SocketWidth;
-                socket.DX = i * ((NodeWidth - SocketVisual.SocketWidth) / len);
-                socket.DY = HeaderHeight - SocketVisual.SocketHeight;
-                socket.Value = ctx[socket.Name];              
-                socketList.Add(socket);
-            }
-
-            _socketsCache = socketList;
-            return _socketsCache;
-        }
-
-        /// <summary>
-        /// Returns node context which is dynamic type. It will contain all node default input/output properties.
-        /// </summary>
-        public object GetNodeContext()
-        {
-            const string stringTypeName = "System.String";
-
-            if (nodeContext == null)
-            {                
-                dynamic context = new DynamicNodeContext();
-
-                foreach (var input in GetInputs())
+                ParameterInfo pp = parms[i];
+                SocketVisual socket = null;
+                if (pp.IsOut)
                 {
-                    var contextName = input.Name.Replace(" ", "");
-                    if (input.ParameterType.FullName.Replace("&", "") == stringTypeName)
-                    {
-                        context[contextName] = string.Empty;
-                    }
-                    else
-                    {
-                        try
-                        {
-                            context[contextName] = Activator.CreateInstance(AppDomain.CurrentDomain, input.ParameterType.Assembly.GetName().Name,
-                            input.ParameterType.FullName.Replace("&", "").Replace(" ", "")).Unwrap();
-                        }
-                        catch (MissingMethodException ex) //For case when type does not have default constructor
-                        {
-                            context[contextName] = null;
-                        }
-                    }
+                    socket = new SocketVisual(this);
+                    socket.Type = pp.ParameterType;
+                    socket.Height = SocketVisual.SocketHeight;
+                    socket.Name = pp.Name;
+                    socket.Width = SocketVisual.SocketWidth;
+                    socket.DX = i * (NodeWidth - SocketVisual.SocketWidth);
+                    socket.DY = HeaderHeight - SocketVisual.SocketHeight;
+
+                    outputSocketList.Add(socket);
                 }
-                foreach (var output in GetOutputs())
+                else
                 {
-                    var contextName = output.Name.Replace(" ", "");
-                    if (output.ParameterType.FullName.Replace("&", "") == stringTypeName)
-                    {
-                        context[contextName] = string.Empty;
-                    }
-                    else
-                    {
-                        try
-                        {
-                            context[contextName] = Activator.CreateInstance(AppDomain.CurrentDomain, output.ParameterType.Assembly.GetName().Name,
-                            output.ParameterType.FullName.Replace("&", "").Replace(" ", "")).Unwrap();
-                        }
-                        catch(MissingMethodException ex) //For case when type does not have default constructor
-                        {
-                            context[contextName] = null;
-                        }
-                    }
+                    socket = new SocketVisual(this);
+                    socket.Type = pp.ParameterType;
+                    socket.Height = SocketVisual.SocketHeight;
+                    socket.Name = pp.Name;
+                    socket.Width = SocketVisual.SocketWidth;
+                    socket.DX = i * (NodeWidth - SocketVisual.SocketWidth);
+                    socket.DY = 0;
+                    socket.Input = true;
+                    socket.HotInput = i == 0;
+
+                    inputSocketList.Add(socket);
                 }
 
-                nodeContext = context;
+                allSocketsList.Add(socket);
             }
-            return nodeContext;
+
+            foreach (SocketVisual s in outputSocketList)
+            {
+                s.DX /= outputSocketList.Count;
+            }
+
+            foreach (SocketVisual s in inputSocketList)
+            {
+                s.DX /= inputSocketList.Count;
+            }
+
+            _outputSocketsCache = outputSocketList;
+            _inputSocketsCache = inputSocketList;
+            _allSocketsOrdered = allSocketsList;
+
+            return (_inputSocketsCache, _outputSocketsCache, _allSocketsOrdered);
         }
 
         internal ParameterInfo[] GetInputs()
         {
-            return MethodInf.GetParameters().Where(x => !x.IsOut).ToArray();
+            return MethodInf.GetParameters().Where(x => !x.IsOut).OrderBy(x => x.Position).ToArray();
         }
 
         internal ParameterInfo[] GetOutputs()
         {
-            return MethodInf.GetParameters().Where(x => x.IsOut).ToArray();
+            return MethodInf.GetParameters().Where(x => x.IsOut).OrderBy(x => x.Position).ToArray();
         }
 
         /// <summary>
@@ -287,7 +249,7 @@ namespace NodeEditor
             }
 
             var sockets = GetSockets();
-            foreach (var socet in sockets)
+            foreach (var socet in sockets.Inputs.Concat(sockets.Outputs))
             {
                 socet.Draw(g, mouseLocation, mouseButtons);
             }
@@ -297,29 +259,19 @@ namespace NodeEditor
         {
             context.CurrentProcessingNode = this;
 
-            var dc = (GetNodeContext() as DynamicNodeContext);
-            var parametersDict = MethodInf.GetParameters().OrderBy(x => x.Position).ToDictionary(x => x.Name, x => dc[x.Name]);
-            var parameters = parametersDict.Values.ToArray();
+            _ = this.GetSockets();
+            object[] parameters = this._allSocketsOrdered.Select(x => x.Input ? x.Value : null).ToArray();
 
-            int ndx = 0;
             MethodInf.Invoke(context, parameters);
-            foreach (var kv in parametersDict.ToArray())
+            for (int i = 0; i < this._allSocketsOrdered.Count; i++)
             {
-                parametersDict[kv.Key] = parameters[ndx];
-                ndx++;
-            }
-
-            var outs = GetSockets();
-
-            foreach (var parameter in dc.ToArray())
-            {
-                dc[parameter] = parametersDict[parameter];
-                var o = outs.FirstOrDefault(x => x.Name == parameter);
-                //if (o != null)
-                Debug.Assert(o != null, "Output not found");
+                SocketVisual sock = this._allSocketsOrdered[i];
+                if (sock.Input)
                 {
-                    o.Value = dc[parameter];
-                }                                
+                    continue;
+                }
+
+                sock.Value = parameters[i];
             }
         }
 

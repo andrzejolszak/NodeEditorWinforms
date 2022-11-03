@@ -51,8 +51,6 @@ namespace NodeEditor
         private NodeVisual dragSocketNode;
         private PointF dragConnectionBegin;
         private PointF dragConnectionEnd;
-        private bool rebuildConnectionDictionary = true;
-        private Dictionary<string, NodeConnection> connectionDictionary = new Dictionary<string, NodeConnection>();
 
         /// <summary>
         /// Context of the editor. You should set here an instance that implements INodesContext interface.
@@ -267,7 +265,7 @@ namespace NodeEditor
                     if (nodeWhole != null)
                     {
                         node = nodeWhole;
-                        var socket = nodeWhole.GetSockets().FirstOrDefault(x => x.GetBounds().Contains(e.Location));
+                        var socket = nodeWhole.GetSockets().All.FirstOrDefault(x => x.GetBounds().Contains(e.Location));
                         if (socket != null)
                         {
                             if ((ModifierKeys & Keys.Control) == Keys.Control)
@@ -278,9 +276,7 @@ namespace NodeEditor
 
                                 if (connection != null)
                                 {
-                                    dragSocket =
-                                        connection.OutputNode.GetSockets()
-                                            .FirstOrDefault(x => x.Name == connection.OutputSocketName);
+                                    dragSocket = connection.OutputSocket;
                                     dragSocketNode = connection.OutputNode;
                                 }
                                 else
@@ -291,15 +287,12 @@ namespace NodeEditor
 
                                     if (connection != null)
                                     {
-                                        dragSocket =
-                                            connection.InputNode.GetSockets()
-                                                .FirstOrDefault(x => x.Name == connection.InputSocketName);
+                                        dragSocket = connection.InputSocket;
                                         dragSocketNode = connection.InputNode;
                                     }
                                 }
 
                                 graph.Connections.Remove(connection);
-                                rebuildConnectionDictionary = true;
                             }
                             else
                             {
@@ -336,7 +329,6 @@ namespace NodeEditor
 
                 if (node != null)
                 {
-                    _ = node.GetNodeContext();
                     OnNodeSelected(node);
                 }
             }
@@ -390,7 +382,7 @@ namespace NodeEditor
                         x => new RectangleF(new PointF(x.X, x.Y), x.GetNodeBounds()).Contains(e.Location));
                 if (nodeWhole != null)
                 {
-                    var socket = nodeWhole.GetSockets().FirstOrDefault(x => x.GetBounds().Contains(e.Location));
+                    var socket = nodeWhole.GetSockets().All.FirstOrDefault(x => x.GetBounds().Contains(e.Location));
                     if (socket != null)
                     {
                         if (IsConnectable(dragSocket,socket) && dragSocket.Input != socket.Input)
@@ -412,7 +404,6 @@ namespace NodeEditor
                             }
 
                             graph.Connections.Add(nc);
-                            rebuildConnectionDictionary = true;
                         }
                     }
                 }
@@ -744,7 +735,7 @@ namespace NodeEditor
                 {
                     init.Feedback = FeedbackType.Debug;
 
-                    // PullResolve(init);
+                    // TODO: reset outputs/values
                     init.Execute(Context);
 
                     foreach (var connection in graph.Connections)
@@ -754,8 +745,7 @@ namespace NodeEditor
                             continue;
                         }
 
-                        var dcIn = connection.InputNode.GetNodeContext() as DynamicNodeContext;
-                        dcIn[connection.InputSocketName] = connection.OutputSocket.Value;
+                        connection.InputSocket.Value = connection.OutputSocket.Value;
                     }
 
                     foreach (var connection in graph.Connections.Where(x => x.OutputNode == init && x.OutputSocket.Value != null))
@@ -794,50 +784,6 @@ namespace NodeEditor
             return false;
         }
 
-        /// <summary>
-        /// Resolves given node, resolving it all dependencies recursively.
-        /// TODO: the pull model
-        /// </summary>
-        /// <param name="node"></param>
-        private void PullResolve(NodeVisual node)
-        {
-            var icontext = (node.GetNodeContext() as DynamicNodeContext);
-            foreach (var input in node.GetInputs())
-            {
-                var connection = GetConnection(node.GUID + input.Name);
-                    //graph.Connections.FirstOrDefault(x => x.InputNode == node && x.InputSocketName == input.Name);
-                if (connection != null)
-                {
-                    PullResolve(connection.OutputNode);
-                    if (!connection.OutputNode.IsInteractive)
-                    {                        
-                        connection.OutputNode.Execute(Context);
-                    }
-                    var ocontext = (connection.OutputNode.GetNodeContext() as DynamicNodeContext);
-                    icontext[connection.InputSocketName] = ocontext[connection.OutputSocketName];                    
-                }
-            }
-        }
-
-        private NodeConnection GetConnection(string v)
-        {
-            if(rebuildConnectionDictionary)
-            {
-                rebuildConnectionDictionary = false;
-                connectionDictionary.Clear();
-                foreach (var conn in graph.Connections)
-                {
-                    connectionDictionary.Add(conn.InputNode.GUID + conn.InputSocketName, conn);
-                }
-            }
-            NodeConnection nc = null;
-            if (connectionDictionary.TryGetValue(v, out nc))
-            {
-                return nc;
-            }
-            return null;
-        }
-
         public string ExportToXml()
         {
             var xml = new XmlDocument();
@@ -850,15 +796,6 @@ namespace NodeEditor
                 var xmlNode = (XmlElement)nodes.AppendChild(xml.CreateElement("Node"));
                 xmlNode.SetAttribute("Name", node.XmlExportName);
                 xmlNode.SetAttribute("Id", node.GetGuid());
-                var xmlContext = (XmlElement)xmlNode.AppendChild(xml.CreateElement("Context"));
-                var context = node.GetNodeContext() as DynamicNodeContext;
-                foreach (var kv in context)
-                {
-                    var ce = (XmlElement)xmlContext.AppendChild(xml.CreateElement("ContextMember"));
-                    ce.SetAttribute("Name", kv);
-                    ce.SetAttribute("Value", Convert.ToString(context[kv] ?? ""));
-                    ce.SetAttribute("Type", context[kv] == null ? "" : context[kv].GetType().FullName);
-                }
             }
             var connections = el.AppendChild(xml.CreateElement("Connections"));
             foreach (var conn in graph.Connections)
@@ -947,7 +884,6 @@ namespace NodeEditor
             {
                 var ident = br.ReadString();
                 if (ident != "NodeSystemP") return;
-                rebuildConnectionDictionary = true;
                 graph.Connections.Clear();
                 graph.Nodes.Clear();
                 Controls.Clear();
@@ -975,7 +911,6 @@ namespace NodeEditor
                     br.ReadBytes(br.ReadInt32()); //read additional data
 
                     graph.Connections.Add(con);
-                    rebuildConnectionDictionary = true;
                 }
                 br.ReadBytes(br.ReadInt32()); //read additional data
             }
@@ -1074,7 +1009,6 @@ namespace NodeEditor
             graph.Connections.Clear();
             Controls.Clear();
             Refresh();
-            rebuildConnectionDictionary = true;
         }
     }
 

@@ -73,9 +73,9 @@ namespace NodeEditor
             for (int i = 0; i < this.Connections.Count; i++)
             {
                 NodeConnection connection = this.Connections[i];
-                var osoc = connection.OutputNode.GetSockets().FirstOrDefault(x => x.Name == connection.OutputSocketName);
+                var osoc = connection.OutputNode.GetSockets().Outputs.FirstOrDefault(x => x.Name == connection.OutputSocketName);
                 var beginSocket = osoc.GetBounds();
-                var isoc = connection.InputNode.GetSockets().FirstOrDefault(x => x.Name == connection.InputSocketName);
+                var isoc = connection.InputNode.GetSockets().Inputs.FirstOrDefault(x => x.Name == connection.InputSocketName);
                 var endSocket = isoc.GetBounds();
                 var begin = beginSocket.Location + new SizeF(beginSocket.Width / 2f, beginSocket.Height);
                 var end = endSocket.Location + new SizeF(endSocket.Width / 2f, 0f);

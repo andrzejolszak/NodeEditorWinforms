@@ -31,12 +31,12 @@ namespace NodeEditor
 
         public SocketVisual OutputSocket
         {
-            get { return OutputNode.GetSockets().FirstOrDefault(x => x.Name == OutputSocketName); }
+            get { return OutputNode.GetSockets().Outputs.FirstOrDefault(x => x.Name == OutputSocketName); }
         }
 
         public SocketVisual InputSocket
         {
-            get { return InputNode.GetSockets().FirstOrDefault(x => x.Name == InputSocketName); }
+            get { return InputNode.GetSockets().Inputs.FirstOrDefault(x => x.Name == InputSocketName); }
         }
     }
 }

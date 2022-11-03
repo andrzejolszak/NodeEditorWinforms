@@ -64,7 +64,6 @@
     <Compile Include="Autocomplete\ITextBoxWrapper.cs" />
     <Compile Include="Autocomplete\Range.cs" />
     <Compile Include="Autocomplete\TextBoxWrapper.cs" />
-    <Compile Include="DynamicNodeContext.cs" />
     <Compile Include="FeedbackType.cs" />
     <Compile Include="INodesContext.cs" />
     <Compile Include="NodeAttribute.cs" />

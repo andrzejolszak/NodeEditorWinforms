@@ -66,7 +66,7 @@ namespace MathSample
         [Node("Show Value","Helper","Basic","Shows input value in the message box", customEditor: typeof(Label))]
         public void ShowMessageBox(object bang, object x)
         {
-            this.CurrentProcessingNode.CustomEditor.Text = x.ToString();
+            this.CurrentProcessingNode.CustomEditor.Text = x?.ToString() ?? "NULL";
            // MessageBox.Show(x.ToString(), "Show Value", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
