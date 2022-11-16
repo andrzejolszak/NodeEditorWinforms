@@ -34,7 +34,6 @@ namespace NodeEditor
         public const string NewName = "*new*";
         public const float NodeWidth = 140;
         public const float HeaderHeight = 32;
-        public const float ComponentPadding = 2;
 
         /// <summary>
         /// Current node name.
@@ -48,7 +47,7 @@ namespace NodeEditor
         public FeedbackType Feedback { get; set; }
         public Control CustomEditor { get; internal set; }
         public string GUID = Guid.NewGuid().ToString();
-        public Color NodeColor = System.Drawing.Color.LightCyan;
+        public Color NodeColor = System.Drawing.Color.GhostWhite;
         private List<SocketVisual> _inputSocketsCache;
         private List<SocketVisual> _outputSocketsCache;
         private List<SocketVisual> _allSocketsOrdered;
@@ -148,8 +147,7 @@ namespace NodeEditor
             var csize = new SizeF();
             if (CustomEditor != null && CustomEditor.ClientSize != default && this.Name != NewName)
             {
-                csize = new SizeF(CustomEditor.ClientSize.Width + 2 + 80 +SocketVisual.SocketHeight*2,
-                    CustomEditor.ClientSize.Height + HeaderHeight + 8);                
+                csize = new SizeF(CustomEditor.ClientSize.Width, CustomEditor.ClientSize.Height + HeaderHeight + 8);                
             }
 
             var h = HeaderHeight;
@@ -204,22 +202,26 @@ namespace NodeEditor
                 g.DrawRectangle(new Pen(System.Drawing.Color.Red, 5), Rectangle.Round(feedrect));
             }
 
-            var caption = new RectangleF(new PointF((float)this.X, (float)this.Y), GetHeaderSize());
-            bool mouseHoverCaption = caption.Contains(mouseLocation);
+            Color fillColor = NodeColor;
 
-            g.FillRectangle(new SolidBrush(NodeColor), rect);
+            bool isHover = rect.Contains(mouseLocation);
+            if (isHover)
+            {
+                fillColor = Color.White;
+            }
 
             if (IsSelected)
             {
-                g.FillRectangle(new SolidBrush(System.Drawing.Color.FromArgb(180, System.Drawing.Color.WhiteSmoke)), rect);
-                g.FillRectangle(mouseHoverCaption ? Brushes.Gold : Brushes.Goldenrod, caption);
-            }
-            else
-            {                
-                g.FillRectangle(mouseHoverCaption ? Brushes.Cyan : Brushes.Aquamarine, caption);
+                fillColor = Color.PaleGoldenrod;
             }
 
-            g.DrawRectangle(Pens.Gray, Rectangle.Round(caption));
+            g.FillRectangle(new SolidBrush(fillColor), rect);
+
+            if (this.CustomEditor != null)
+            {
+                this.CustomEditor.BackColor = fillColor;
+            }
+
             g.DrawRectangle(Pens.Black, Rectangle.Round(rect));
 
             if (this.IsInteractive)
@@ -265,11 +267,11 @@ namespace NodeEditor
             {
                 if (this.Name == NewName)
                 {
-                    CustomEditor.Location = new Point((int)this.X + 1, (int)this.Y + 1);
+                    CustomEditor.Location = new Point((int)this.X + 4, (int)this.Y + 8);
                 }
                 else
                 {
-                    CustomEditor.Location = new Point((int)(this.X + 1 + 40 + SocketVisual.SocketHeight), (int)(this.Y + HeaderHeight + 4));
+                    CustomEditor.Location = new Point((int)(this.X + 4), (int)(this.Y + HeaderHeight + 4));
                 }
             }
         }

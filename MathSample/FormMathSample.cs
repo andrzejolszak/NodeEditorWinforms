@@ -46,5 +46,10 @@ namespace MathSample
                 controlNodeEditor.nodesControl.Execute(o);
             }
         }
+
+        private void FormMathSample_Shown(object sender, EventArgs e)
+        {
+            controlNodeEditor.Focus();
+        }
     }
 }

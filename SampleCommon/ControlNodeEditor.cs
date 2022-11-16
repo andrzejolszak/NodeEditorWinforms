@@ -16,9 +16,12 @@ namespace SampleCommon
             InitializeComponent();
         }
 
-        private void buttonProcess_Click(object sender, EventArgs e)
+        private void nodesControl_KeyDown(object sender, KeyEventArgs e)
         {
-            nodesControl.ToggleRunMode();            
+            if (e.Control && e.KeyCode == Keys.E)
+            {
+                nodesControl.ToggleRunMode();
+            }
         }
     }
 }

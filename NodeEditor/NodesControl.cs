@@ -253,7 +253,7 @@ namespace NodeEditor
 
                 var node =
                     graph.Nodes.OrderBy(x => x.Order).FirstOrDefault(
-                        x => new RectangleF(new PointF(x.X, x.Y), x.GetHeaderSize()).Contains(e.Location));
+                        x => new RectangleF(new PointF(x.X, x.Y), x.GetNodeBounds()).Contains(e.Location));
 
                 if (!mdown && !IsRunMode)
                 {
@@ -453,7 +453,7 @@ namespace NodeEditor
                 return;
             }
 
-            var nv = new NodeVisual(lastMouseLocation.X, lastMouseLocation.Y);
+            var nv = new NodeVisual(lastMouseLocation.X, lastMouseLocation.Y - NodeVisual.HeaderHeight);
             nv.MethodInf = this.DummyMethod();
             nv.IsInteractive = false;
             nv.Name = NodeVisual.NewName;
@@ -463,8 +463,10 @@ namespace NodeEditor
             nv.CustomHeight = -1;
 
             TextBox tb = new TextBox();
-            tb.Width = (int)NodeVisual.NodeWidth - 2;
-            tb.Height = (int)NodeVisual.HeaderHeight - 2;
+            tb.Width = (int)NodeVisual.NodeWidth - 4;
+            tb.Height = (int)NodeVisual.HeaderHeight - 4;
+            tb.BackColor = nv.NodeColor;
+            tb.BorderStyle = BorderStyle.None;
             tb.KeyPress += (s, ee) =>
             {
                 if (ee.KeyChar == (char)Keys.Enter)
@@ -486,6 +488,7 @@ namespace NodeEditor
             graph.Nodes.Add(nv);
             Refresh();
             needRepaint = true;
+            tb.Focus();
 
             void SwapNode()
             {
@@ -522,6 +525,7 @@ namespace NodeEditor
                     nv2.CustomEditor = ctrl = Activator.CreateInstance(attrib.CustomEditor) as Control;
                     if (ctrl != null)
                     {
+                        ctrl.BackColor = nv.NodeColor;
                         ctrl.Tag = (nv2, this.context);
                         Controls.Add(ctrl);
                     }
@@ -619,6 +623,7 @@ namespace NodeEditor
                             nv.CustomEditor = ctrl = Activator.CreateInstance(node.Attribute.CustomEditor) as Control;
                             if (ctrl != null)
                             {
+                                ctrl.BackColor = nv.NodeColor;
                                 ctrl.Tag = (nv, this.context);                                
                                 Controls.Add(ctrl);                                                               
                             }
@@ -976,6 +981,7 @@ namespace NodeEditor
                 Control ctrl = nv.CustomEditor;
                 if (ctrl != null)
                 {
+                    ctrl.BackColor = nv.NodeColor;
                     ctrl.Tag = (nv, this.context);
                     Controls.Add(ctrl);
                 }

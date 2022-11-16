@@ -48,6 +48,7 @@
             this.Name = "FormMathSample";
             this.Text = "NodeEditor WinForms - Math Sample";
             this.Load += new System.EventHandler(this.FormMathSample_Load);
+            this.Shown += new System.EventHandler(this.FormMathSample_Shown);
             this.ResumeLayout(false);
 
         }

@@ -45,12 +45,15 @@ namespace NodeEditor
             g.InterpolationMode = InterpolationMode.Low;
             g.SmoothingMode = SmoothingMode.HighSpeed;
 
+            g.FillRectangle(new SolidBrush(Color.FromArgb(220, Color.White)), g.ClipBounds);
+
             foreach (var node in Nodes)
             {
-                g.FillRectangle(Brushes.Black, new RectangleF(new PointF(node.X+6, node.Y+6), node.GetNodeBounds()));
+                var rect = new RectangleF(new PointF((float)node.X, (float)node.Y), node.GetNodeBounds());
+                bool isHover = rect.Contains(mouseLocation);
+                int offset = isHover ? 6 : 4;
+                g.FillRectangle(Brushes.DarkGray, new RectangleF(new PointF(node.X+ offset, node.Y+ offset), node.GetNodeBounds()));
             }
-
-            g.FillRectangle(new SolidBrush(Color.FromArgb(200, Color.White)), g.ClipBounds);
 
             if (KdTree != null && !_hoverRecalc)
             {
