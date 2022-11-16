@@ -15,19 +15,24 @@
  * OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-using System;
-using System.Collections.Generic;
+using Microsoft.Msagl.Core.Layout;
 using System.Linq;
-using System.Text;
 
 namespace NodeEditor
 {    
-    internal class NodeConnection
+    internal class NodeConnection : Edge
     {
-        public NodeVisual OutputNode { get; set; }
-        public string OutputSocketName { get; set; }
-        public NodeVisual InputNode { get; set; }
-        public string InputSocketName { get; set; }
+        public NodeVisual OutputNode => this.Source as NodeVisual;
+        public string OutputSocketName { get; }
+        public NodeVisual InputNode => this.Target as NodeVisual;
+        public string InputSocketName { get; }
+
+        public NodeConnection(NodeVisual outputNode, string outputSocketName, NodeVisual inputNode, string inputSocketName)
+            : base(outputNode, inputNode)
+        {
+            OutputSocketName = outputSocketName;
+            InputSocketName = inputSocketName;
+        }
 
         public SocketVisual OutputSocket
         {

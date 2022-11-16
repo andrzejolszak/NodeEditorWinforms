@@ -15,32 +15,27 @@
  * OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+using Microsoft.Msagl.Core.Layout;
 using System;
-using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
-using System.Linq;
-using System.Text;
 using System.Windows.Forms;
 
 namespace NodeEditor
 {
-    public class SocketVisual
+    public class SocketVisual : RelativeFloatingPort
     {
         public const float SocketHeight = 8;
 
         public const float SocketWidth = 16;
 
-        public SocketVisual(NodeVisual nodeVisual)
+        public SocketVisual(NodeVisual nodeVisual, Microsoft.Msagl.Core.Geometry.Point locationOffset) : base(() => null, () => nodeVisual.Center, locationOffset)
         {
             this.ParentNode = nodeVisual;
         }
 
-        public float DX { get; set; }
-        public float DY { get; set; }
-
-        public float Width { get; set; }
-        public float Height { get; set; }
+        public float Width { get; set; } = SocketWidth;
+        public float Height { get; set; } = SocketHeight;
         public string Name { get; set; }
         public Type Type { get; set; }
         public bool Input { get; set; }
@@ -52,8 +47,8 @@ namespace NodeEditor
 
         public void Draw(Graphics g, Point mouseLocation, MouseButtons mouseButtons)
         {
-            float x = this.ParentNode.X + DX;
-            float y = this.ParentNode.Y + DY;
+            float x = (float)(this.ParentNode.Center.X + this.LocationOffset.X);
+            float y = (float)(this.ParentNode.Center.Y + this.LocationOffset.Y);
 
             var socketRect = new RectangleF(x, y, Width, Height);
             var hover = socketRect.Contains(mouseLocation);
@@ -90,7 +85,7 @@ namespace NodeEditor
 
         public RectangleF GetBounds()
         {
-            return new RectangleF(this.ParentNode.X + DX, this.ParentNode.Y + DY, Width, Height);
+            return new RectangleF((float)(this.ParentNode.Center.X + this.LocationOffset.X), (float)(this.ParentNode.Center.Y + this.LocationOffset.Y), Width, Height);
         }
     }
 }

@@ -17,7 +17,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Drawing;
 using System.Data;
 using System.Drawing.Drawing2D;
@@ -197,8 +196,7 @@ namespace NodeEditor
             {                                            
                 foreach (var node in graph.Nodes.Where(x => x.IsSelected))
                 {
-                    node.X += em.X - lastmpos.X;
-                    node.Y += em.Y - lastmpos.Y;
+                    node.BoundaryCurve.Translate(new Microsoft.Msagl.Core.Geometry.Point(em.X - lastmpos.X, em.Y - lastmpos.Y));
 
                     node.LayoutEditor();
                 }
@@ -217,7 +215,7 @@ namespace NodeEditor
                 
                 if (dragSocket != null)
                 {
-                    var center = new PointF(dragSocket.ParentNode.X + dragSocket.DX + dragSocket.Width/2f, dragSocket.ParentNode.Y + dragSocket.DY + dragSocket.Height/2f);
+                    var center = new PointF(dragSocket.ParentNode.X + (float)dragSocket.LocationOffset.X + dragSocket.Width/2f, dragSocket.ParentNode.Y + (float)dragSocket.LocationOffset.Y + dragSocket.Height/2f);
                     if (dragSocket.Input)
                     {
                         dragConnectionBegin.X += em.X - lastmpos.X;
@@ -387,20 +385,14 @@ namespace NodeEditor
                     {
                         if (IsConnectable(dragSocket,socket) && dragSocket.Input != socket.Input)
                         {                                                        
-                            var nc = new NodeConnection();
+                            NodeConnection nc = null;
                             if (!dragSocket.Input)
                             {
-                                nc.OutputNode = dragSocketNode;
-                                nc.OutputSocketName = dragSocket.Name;
-                                nc.InputNode = nodeWhole;
-                                nc.InputSocketName = socket.Name;
+                                nc = new NodeConnection(dragSocketNode, dragSocket.Name, nodeWhole, socket.Name);
                             }
                             else
                             {
-                                nc.InputNode = dragSocketNode;
-                                nc.InputSocketName = dragSocket.Name;
-                                nc.OutputNode = nodeWhole;
-                                nc.OutputSocketName = socket.Name;
+                                nc = new NodeConnection(nodeWhole, socket.Name, dragSocketNode, dragSocket.Name);
                             }
 
                             graph.Connections.Add(nc);
@@ -461,9 +453,7 @@ namespace NodeEditor
                 return;
             }
 
-            var nv = new NodeVisual();
-            nv.X = lastMouseLocation.X;
-            nv.Y = lastMouseLocation.Y;
+            var nv = new NodeVisual(lastMouseLocation.X, lastMouseLocation.Y);
             nv.MethodInf = this.DummyMethod();
             nv.IsInteractive = false;
             nv.Name = NodeVisual.NewName;
@@ -514,9 +504,7 @@ namespace NodeEditor
                     return;
                 }
 
-                var nv2 = new NodeVisual();
-                nv2.X = nv.X;
-                nv2.Y = nv.Y;
+                var nv2 = new NodeVisual(nv.X, nv.Y);
                 nv2.MethodInf = info;
                 nv2.IsInteractive = attrib.IsInteractive;
                 nv2.Name = attrib.Name;
@@ -616,9 +604,7 @@ namespace NodeEditor
                     {
                         var tag = (s as ToolStripMenuItem).Tag as NodeToken;
 
-                        var nv = new NodeVisual();
-                        nv.X = lastMouseLocation.X;
-                        nv.Y = lastMouseLocation.Y;
+                        var nv = new NodeVisual(lastMouseLocation.X, lastMouseLocation.Y);
                         nv.MethodInf = node.Method;
                         nv.IsInteractive = node.Attribute.IsInteractive;
                         nv.Name = node.Attribute.Name;
@@ -675,8 +661,7 @@ namespace NodeEditor
                 ms.Seek(0, SeekOrigin.Begin);
                 var br = new BinaryReader(ms);
                 var clone = DeserializeNode(br);
-                clone.X += 40;
-                clone.Y += 40;
+                clone.BoundaryCurve.Translate(new Microsoft.Msagl.Core.Geometry.Point(40, 40));
                 clone.GUID = Guid.NewGuid().ToString();
                 cloned.Add(clone);
                 br.Dispose();
@@ -901,13 +886,13 @@ namespace NodeEditor
                 var connectionsCount = br.ReadInt32();
                 for (int i = 0; i < connectionsCount; i++)
                 {
-                    var con = new NodeConnection();
                     var og = br.ReadString();
-                    con.OutputNode = graph.Nodes.FirstOrDefault(x => x.GUID == og);
-                    con.OutputSocketName = br.ReadString();
+                    NodeVisual outputNode = graph.Nodes.FirstOrDefault(x => x.GUID == og);
+                    string outputSocketName = br.ReadString();
                     var ig = br.ReadString();
-                    con.InputNode = graph.Nodes.FirstOrDefault(x => x.GUID == ig);
-                    con.InputSocketName = br.ReadString();
+                    NodeVisual inputNode = graph.Nodes.FirstOrDefault(x => x.GUID == ig);
+                    string inputSocketName = br.ReadString();
+                    var con = new NodeConnection(outputNode, outputSocketName, inputNode, inputSocketName);
                     br.ReadBytes(br.ReadInt32()); //read additional data
 
                     graph.Connections.Add(con);
@@ -919,10 +904,9 @@ namespace NodeEditor
 
         private NodeVisual DeserializeNode(BinaryReader br)
         {
-            var nv = new NodeVisual();
-            nv.GUID = br.ReadString();
-            nv.X = br.ReadSingle();
-            nv.Y = br.ReadSingle();
+            string id = br.ReadString();
+            var nv = new NodeVisual(br.ReadSingle(), br.ReadSingle());
+            nv.GUID = id;
             nv.IsInteractive = br.ReadBoolean();
             nv.Name = br.ReadString();
             nv.Order = br.ReadInt32();

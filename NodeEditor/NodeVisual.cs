@@ -15,17 +15,13 @@
  * OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+using Microsoft.Msagl.Core.Geometry.Curves;
+using Microsoft.Msagl.Core.Layout;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Drawing;
-using System.Dynamic;
 using System.Linq;
 using System.Reflection;
-using System.Reflection.Emit;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading;
 using System.Windows.Forms;
 
 namespace NodeEditor
@@ -33,7 +29,7 @@ namespace NodeEditor
     /// <summary>
     /// Class that represents one instance of node.
     /// </summary>
-    public class NodeVisual
+    public class NodeVisual : Node
     {
         public const string NewName = "*new*";
         public const float NodeWidth = 140;
@@ -45,24 +41,14 @@ namespace NodeEditor
         /// </summary>
         public string Name { get; set; }
 
-        /// <summary>
-        /// Current node position X coordinate.
-        /// </summary>
-        public float X { get; set; }
-
-        /// <summary>
-        /// Current node position Y coordinate.
-        /// </summary>
-        public float Y { get; set; }
         internal MethodInfo MethodInf { get; set; }
         internal int Order { get; set; }
         public bool IsInteractive { get; set; }
         public bool IsSelected { get; set; }
         public FeedbackType Feedback { get; set; }
-        public object nodeContext { get; set; } 
         public Control CustomEditor { get; internal set; }
         public string GUID = Guid.NewGuid().ToString();
-        public Color NodeColor = Color.LightCyan;
+        public Color NodeColor = System.Drawing.Color.LightCyan;
         private List<SocketVisual> _inputSocketsCache;
         private List<SocketVisual> _outputSocketsCache;
         private List<SocketVisual> _allSocketsOrdered;
@@ -76,7 +62,11 @@ namespace NodeEditor
         internal int CustomWidth = -1;
         internal int CustomHeight = -1;
 
-        internal NodeVisual()
+        public float X => (float)this.BoundingBox.Left;
+
+        public float Y => (float)this.BoundingBox.Bottom;
+
+        internal NodeVisual(double x0, double y0) : base(new RoundedRect(new Microsoft.Msagl.Core.Geometry.Rectangle(x0, y0, x0, y0), 1, 1))
         {
             Feedback = FeedbackType.Debug;
         }
@@ -100,31 +90,25 @@ namespace NodeEditor
             var NodeWidth = GetNodeBounds().Width;
 
             ParameterInfo[] parms = MethodInf.GetParameters().OrderBy(x => x.Position).ToArray();
+            int outParamsCount = parms.Count(x => x.IsOut);
+            int inParamsCount = parms.Count(x => !x.IsOut);
             for (int i = 0; i < parms.Length; i++)
             {
                 ParameterInfo pp = parms[i];
                 SocketVisual socket = null;
                 if (pp.IsOut)
                 {
-                    socket = new SocketVisual(this);
+                    socket = new SocketVisual(this, new Microsoft.Msagl.Core.Geometry.Point(i * (NodeWidth - SocketVisual.SocketWidth) / outParamsCount - NodeWidth / 2, this.Height / 2 - SocketVisual.SocketHeight));
                     socket.Type = pp.ParameterType;
-                    socket.Height = SocketVisual.SocketHeight;
                     socket.Name = pp.Name;
-                    socket.Width = SocketVisual.SocketWidth;
-                    socket.DX = i * (NodeWidth - SocketVisual.SocketWidth);
-                    socket.DY = HeaderHeight - SocketVisual.SocketHeight;
 
                     outputSocketList.Add(socket);
                 }
                 else
                 {
-                    socket = new SocketVisual(this);
+                    socket = new SocketVisual(this, new Microsoft.Msagl.Core.Geometry.Point(i * ( NodeWidth - SocketVisual.SocketWidth) / inParamsCount - NodeWidth / 2, -this.Height / 2));
                     socket.Type = pp.ParameterType;
-                    socket.Height = SocketVisual.SocketHeight;
                     socket.Name = pp.Name;
-                    socket.Width = SocketVisual.SocketWidth;
-                    socket.DX = i * (NodeWidth - SocketVisual.SocketWidth);
-                    socket.DY = 0;
                     socket.Input = true;
                     socket.HotInput = i == 0;
 
@@ -132,16 +116,6 @@ namespace NodeEditor
                 }
 
                 allSocketsList.Add(socket);
-            }
-
-            foreach (SocketVisual s in outputSocketList)
-            {
-                s.DX /= outputSocketList.Count;
-            }
-
-            foreach (SocketVisual s in inputSocketList)
-            {
-                s.DX /= inputSocketList.Count;
             }
 
             _outputSocketsCache = outputSocketList;
@@ -166,6 +140,11 @@ namespace NodeEditor
         /// </summary>        
         public SizeF GetNodeBounds()
         {
+            if (this.BoundingBox.Width != 0 && this.BoundingBox.Height != 0)
+            {
+                return new SizeF((float)this.BoundingBox.Width, (float)this.BoundingBox.Height);
+            }
+
             var csize = new SizeF();
             if (CustomEditor != null && CustomEditor.ClientSize != default && this.Name != NewName)
             {
@@ -177,16 +156,21 @@ namespace NodeEditor
 
             csize.Width = Math.Max(csize.Width, NodeWidth);
             csize.Height = Math.Max(csize.Height, h);
+
             if(CustomWidth >= 0)
             {
                 csize.Width = CustomWidth;
             }
+
             if(CustomHeight >= 0)
             {
                 csize.Height = CustomHeight;
             }
 
-            return new SizeF(csize.Width, csize.Height);
+            this.BoundingBox = new Microsoft.Msagl.Core.Geometry.Rectangle(this.BoundingBox.Left, this.BoundingBox.Bottom, new Microsoft.Msagl.Core.Geometry.Point(csize.Width, csize.Height));
+
+            return new SizeF((float)this.BoundingBox.Width, (float)this.BoundingBox.Height);
+;
         }
 
         /// <summary>
@@ -206,28 +190,28 @@ namespace NodeEditor
         /// <param name="mouseButtons">Mouse buttons that are pressed while drawing node.</param>
         public void Draw(Graphics g, Point mouseLocation, MouseButtons mouseButtons)
         {
-            var rect = new RectangleF(new PointF(X,Y), GetNodeBounds());
+            var rect = new RectangleF(new PointF((float)this.X, (float)this.Y), GetNodeBounds());
 
             var feedrect = rect;
             feedrect.Inflate(10, 10);
 
             if (Feedback == FeedbackType.Warning)
             {
-                g.DrawRectangle(new Pen(Color.Yellow, 4), Rectangle.Round(feedrect));
+                g.DrawRectangle(new Pen(System.Drawing.Color.Yellow, 4), Rectangle.Round(feedrect));
             }
             else if (Feedback == FeedbackType.Error)
             {
-                g.DrawRectangle(new Pen(Color.Red, 5), Rectangle.Round(feedrect));
+                g.DrawRectangle(new Pen(System.Drawing.Color.Red, 5), Rectangle.Round(feedrect));
             }
 
-            var caption = new RectangleF(new PointF(X,Y), GetHeaderSize());
+            var caption = new RectangleF(new PointF((float)this.X, (float)this.Y), GetHeaderSize());
             bool mouseHoverCaption = caption.Contains(mouseLocation);
 
             g.FillRectangle(new SolidBrush(NodeColor), rect);
 
             if (IsSelected)
             {
-                g.FillRectangle(new SolidBrush(Color.FromArgb(180,Color.WhiteSmoke)), rect);
+                g.FillRectangle(new SolidBrush(System.Drawing.Color.FromArgb(180, System.Drawing.Color.WhiteSmoke)), rect);
                 g.FillRectangle(mouseHoverCaption ? Brushes.Gold : Brushes.Goldenrod, caption);
             }
             else
@@ -245,7 +229,7 @@ namespace NodeEditor
 
             if (this.Name != NewName)
             {
-                g.DrawString(Name, SystemFonts.DefaultFont, Brushes.Black, new PointF(X + 3, Y + HeaderHeight / 4));
+                g.DrawString(Name, SystemFonts.DefaultFont, Brushes.Black, new PointF((float)this.X + 3, (float)this.Y + HeaderHeight / 4));
             }
 
             var sockets = GetSockets();
@@ -281,11 +265,11 @@ namespace NodeEditor
             {
                 if (this.Name == NewName)
                 {
-                    CustomEditor.Location = new Point((int)X + 1, (int)Y + 1);
+                    CustomEditor.Location = new Point((int)this.X + 1, (int)this.Y + 1);
                 }
                 else
                 {
-                    CustomEditor.Location = new Point((int)(X + 1 + 40 + SocketVisual.SocketHeight), (int)(Y + HeaderHeight + 4));
+                    CustomEditor.Location = new Point((int)(this.X + 1 + 40 + SocketVisual.SocketHeight), (int)(this.Y + HeaderHeight + 4));
                 }
             }
         }
