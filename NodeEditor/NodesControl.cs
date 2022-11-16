@@ -215,7 +215,7 @@ namespace NodeEditor
                 
                 if (dragSocket != null)
                 {
-                    var center = new PointF(dragSocket.ParentNode.X + (float)dragSocket.LocationOffset.X + dragSocket.Width/2f, dragSocket.ParentNode.Y + (float)dragSocket.LocationOffset.Y + dragSocket.Height/2f);
+                    var center = new PointF((float)dragSocket.ParentNode.Center.X + (float)dragSocket.LocationOffset.X + dragSocket.Width/2f, (float)dragSocket.ParentNode.Center.Y + (float)dragSocket.LocationOffset.Y + dragSocket.Height/2f);
                     if (dragSocket.Input)
                     {
                         dragConnectionBegin.X += em.X - lastmpos.X;
