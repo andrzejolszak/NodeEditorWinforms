@@ -79,6 +79,8 @@ namespace NodeEditor
         /// </summary>
         public int Height { get; set; }
 
+        public bool InvokeOnLoad { get; set; }
+
         /// <summary>
         /// Attribute for exposing method as node.
         /// </summary>
@@ -94,7 +96,7 @@ namespace NodeEditor
         /// <param name="height">Height of single node, or Auto if not determined</param>
         public NodeAttribute(string name = "Node", string menu = "", string category = "General",
             string description = "Some node.", bool isInteractive = false, Type customEditor = null, string xmlExportName = "",
-            int width = Auto, int height = Auto)
+            int width = Auto, int height = Auto, bool invokeOnLoad = false)
         {
             Name = name;
             Menu = menu;
@@ -105,6 +107,7 @@ namespace NodeEditor
             XmlExportName = xmlExportName;
             Width = width;
             Height = height;
+            InvokeOnLoad = invokeOnLoad;
         }
 
         /// <summary>

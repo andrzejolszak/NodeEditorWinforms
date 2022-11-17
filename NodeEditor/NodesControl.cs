@@ -32,15 +32,8 @@ namespace NodeEditor
     /// <summary>
     /// Main control of Node Editor Winforms
     /// </summary>
-    [ToolboxBitmap(typeof(NodesControl), "nodeed")]
     public partial class NodesControl : UserControl
     {
-        internal class NodeToken
-        {
-            public MethodInfo Method;
-            public NodeAttribute Attribute;
-        }
-
         private NodesGraph graph = new NodesGraph();
         private bool needRepaint = true;
         private Timer timer = new Timer();
@@ -90,11 +83,7 @@ namespace NodeEditor
         /// </summary>
         public event Action<RectangleF> OnShowLocation = delegate { };
 
-        private readonly Dictionary<ToolStripMenuItem,int> allContextItems = new Dictionary<ToolStripMenuItem, int>();
-
         private Point lastMouseLocation;
-
-        private Point autoScroll;
 
         private PointF selectionStart;
 
@@ -406,44 +395,6 @@ namespace NodeEditor
             needRepaint = true;
         }
 
-        private void AddToMenu(ToolStripItemCollection items, NodeToken token, string path, EventHandler click)
-        {
-            var pathParts = path.Split(new[] {'/'}, StringSplitOptions.RemoveEmptyEntries);
-            var first = pathParts.FirstOrDefault();
-            ToolStripMenuItem item = null;
-            if (!items.ContainsKey(first))
-            {
-                item = new ToolStripMenuItem(first);
-                item.Name = first;                
-                item.Tag = token;
-                items.Add(item);
-            }
-            else
-            {
-                item = items[first] as ToolStripMenuItem;
-            }
-            var next = string.Join("/", pathParts.Skip(1));
-            if (!string.IsNullOrEmpty(next))
-            {
-                item.MouseEnter += (sender, args) => OnNodeHint("");
-                AddToMenu(item.DropDownItems, token, next, click);
-            }
-            else
-            {
-                item.Click += click;
-                item.Click += (sender, args) =>
-                {
-                    var i = allContextItems.Keys.FirstOrDefault(x => x.Name == item.Name);
-                    allContextItems[i]++;
-                };
-                item.MouseEnter += (sender, args) => OnNodeHint(token.Attribute.Description ?? "");
-                if (!allContextItems.Keys.Any(x => x.Name == item.Name))
-                {
-                    allContextItems.Add(item, 0);
-                }
-            }
-        }
-
         public MethodInfo DummyMethod() => MethodInfo.GetCurrentMethod() as MethodInfo;
 
         private void NodesControl_DoubleMouseClick(object sender, MouseEventArgs e)
@@ -515,6 +466,7 @@ namespace NodeEditor
                 nv2.XmlExportName = attrib.XmlExportName;
                 nv2.CustomWidth = attrib.Width;
                 nv2.CustomHeight = attrib.Height;
+                nv2.InvokeOnLoad = attrib.InvokeOnLoad;
 
                 Controls.Remove(tb);
                 graph.Nodes.Remove(nv);
@@ -547,20 +499,6 @@ namespace NodeEditor
 
             if (e.Button == MouseButtons.Right)
             {
-                var methods = Context.GetType().GetMethods();
-                var nodes =
-                    methods.Select(
-                        x =>
-                            new
-                                NodeToken()
-                            {
-                                Method = x,
-                                Attribute =
-                                    x.GetCustomAttributes(typeof (NodeAttribute), false)
-                                        .Cast<NodeAttribute>()
-                                        .FirstOrDefault()
-                            }).Where(x => x.Attribute != null);
-
                 var context = new ContextMenuStrip();
                 if (graph.Nodes.Exists(x=>x.IsSelected))
                 {
@@ -593,48 +531,7 @@ namespace NodeEditor
                     }
                     context.Items.Add(new ToolStripSeparator());
                 }
-                if (allContextItems.Values.Any(x => x > 0))
-                {
-                    var handy = allContextItems.Where(x => x.Value > 0 && !string.IsNullOrEmpty(((x.Key.Tag) as NodeToken).Attribute.Menu)).OrderByDescending(x => x.Value).Take(8);
-                    foreach (var kv in handy)
-                    {
-                        context.Items.Add(kv.Key);
-                    }
-                    context.Items.Add(new ToolStripSeparator());
-                }
-                foreach (var node in nodes.OrderBy(x=>x.Attribute.Path))
-                {
-                    AddToMenu(context.Items, node, node.Attribute.Path, (s,ev) =>
-                    {
-                        var tag = (s as ToolStripMenuItem).Tag as NodeToken;
 
-                        var nv = new NodeVisual(lastMouseLocation.X, lastMouseLocation.Y);
-                        nv.MethodInf = node.Method;
-                        nv.IsInteractive = node.Attribute.IsInteractive;
-                        nv.Name = node.Attribute.Name;
-                        nv.Order = graph.Nodes.Count;
-                        nv.XmlExportName = node.Attribute.XmlExportName;
-                        nv.CustomWidth = node.Attribute.Width;
-                        nv.CustomHeight = node.Attribute.Height;
-
-                        if (node.Attribute.CustomEditor != null)
-                        {
-                            Control ctrl = null;
-                            nv.CustomEditor = ctrl = Activator.CreateInstance(node.Attribute.CustomEditor) as Control;
-                            if (ctrl != null)
-                            {
-                                ctrl.BackColor = nv.NodeColor;
-                                ctrl.Tag = (nv, this.context);                                
-                                Controls.Add(ctrl);                                                               
-                            }
-                            nv.LayoutEditor();
-                        }
-
-                        graph.Nodes.Add(nv);
-                        Refresh();
-                        needRepaint = true;
-                    });                    
-                }
                 context.Show(MousePosition);
             }
         }
@@ -699,18 +596,26 @@ namespace NodeEditor
         {
             this.IsRunMode = !this.IsRunMode;
             this.Cursor = this.IsRunMode ? Cursors.Hand : Cursors.Default;
-            this.context.OnRunModeToggled(this.IsRunMode);
+
+            Queue<NodeVisual> nodeQueue = new Queue<NodeVisual>();
+            foreach(NodeVisual node in graph.Nodes)
+            {
+                if (node.InvokeOnLoad)
+                {
+                    nodeQueue.Enqueue(node);
+                }
+            }
+
+            this.Execute(nodeQueue);
         }
 
         /// <summary>
         /// Executes whole node graph (when called parameterless) or given node when specified.
         /// </summary>
         /// <param name="node"></param>
-        public void Execute(NodeVisual node)
+        public void Execute(Queue<NodeVisual> queue)
         {            
-            var nodeQueue = new Queue<NodeVisual>();
-            nodeQueue.Enqueue(node);
-
+            var nodeQueue = queue;
             while (nodeQueue.Count > 0)
             {
                 //Refresh();
@@ -772,43 +677,6 @@ namespace NodeEditor
             }
 
             return false;
-        }
-
-        public string ExportToXml()
-        {
-            var xml = new XmlDocument();
-
-            XmlElement el = (XmlElement)xml.AppendChild(xml.CreateElement("NodeGrap"));
-            el.SetAttribute("Created", DateTime.Now.ToString());
-            var nodes = el.AppendChild(xml.CreateElement("Nodes"));
-            foreach (var node in graph.Nodes)
-            {
-                var xmlNode = (XmlElement)nodes.AppendChild(xml.CreateElement("Node"));
-                xmlNode.SetAttribute("Name", node.XmlExportName);
-                xmlNode.SetAttribute("Id", node.GetGuid());
-            }
-            var connections = el.AppendChild(xml.CreateElement("Connections"));
-            foreach (var conn in graph.Connections)
-            {
-                var xmlConn = (XmlElement)nodes.AppendChild(xml.CreateElement("Connection"));
-                xmlConn.SetAttribute("OutputNodeId", conn.OutputNode.GetGuid());
-                xmlConn.SetAttribute("OutputNodeSocket", conn.OutputSocketName);
-                xmlConn.SetAttribute("InputNodeId", conn.InputNode.GetGuid());
-                xmlConn.SetAttribute("InputNodeSocket", conn.InputSocketName);
-            }
-            StringBuilder sb = new StringBuilder();
-            XmlWriterSettings settings = new XmlWriterSettings
-            {
-                Indent = true,
-                IndentChars = "  ",
-                NewLineChars = "\r\n",
-                NewLineHandling = NewLineHandling.Replace
-            };
-            using (XmlWriter writer = XmlWriter.Create(sb, settings))
-            {
-                xml.Save(writer);
-            }
-            return sb.ToString();
         }
 
         /// <summary>
@@ -946,6 +814,7 @@ namespace NodeEditor
             {
                 nv.CustomWidth = attribute.Width;
                 nv.CustomHeight = attribute.Height;
+                nv.InvokeOnLoad = attribute.InvokeOnLoad;
             }
 
             var additional = br.ReadInt32(); //read additional data
@@ -974,8 +843,7 @@ namespace NodeEditor
                 }
                 else
                 {
-                    nv.CustomEditor =
-                        Activator.CreateInstance(AppDomain.CurrentDomain, customEditorAssembly, customEditor).Unwrap() as Control;
+                    nv.CustomEditor = Activator.CreateInstance(AppDomain.CurrentDomain, customEditorAssembly, customEditor).Unwrap() as Control;
                 }
 
                 Control ctrl = nv.CustomEditor;

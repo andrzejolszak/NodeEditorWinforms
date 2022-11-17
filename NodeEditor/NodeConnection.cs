@@ -32,16 +32,12 @@ namespace NodeEditor
         {
             OutputSocketName = outputSocketName;
             InputSocketName = inputSocketName;
+            OutputSocket = OutputNode.GetSockets().Outputs.FirstOrDefault(x => x.Name == OutputSocketName);
+            InputSocket = InputNode.GetSockets().Inputs.FirstOrDefault(x => x.Name == InputSocketName);
         }
 
-        public SocketVisual OutputSocket
-        {
-            get { return OutputNode.GetSockets().Outputs.FirstOrDefault(x => x.Name == OutputSocketName); }
-        }
+        public SocketVisual OutputSocket { get; }
 
-        public SocketVisual InputSocket
-        {
-            get { return InputNode.GetSockets().Inputs.FirstOrDefault(x => x.Name == InputSocketName); }
-        }
+        public SocketVisual InputSocket { get; }
     }
 }

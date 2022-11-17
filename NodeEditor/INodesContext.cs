@@ -37,9 +37,5 @@ namespace NodeEditor
         /// to the nodes graph. (Message, Related Node, Feedback Type, Tag - Anything, BreakExecution)
         /// </summary>
         event Action<string, NodeVisual, FeedbackType, object, bool> FeedbackInfo;
-
-        void OnRunModeToggled(bool isRunMode);
-
-        event Action<bool> RunModeToggled;
     }
 }

@@ -19,7 +19,7 @@ namespace MathSample
         public FormMathSample()
         {
             InitializeComponent();
-            this.context = new MathContext(x => this.controlNodeEditor.nodesControl.Execute(x));
+            this.context = new MathContext();
         }
 
         private void FormMathSample_Load(object sender, EventArgs e)
@@ -43,7 +43,7 @@ namespace MathSample
         {
             if (controlNodeEditor.nodesControl.IsRunMode && o.IsInteractive)
             {
-                controlNodeEditor.nodesControl.Execute(o);
+                controlNodeEditor.nodesControl.Execute(new Queue<NodeVisual>(new[]{ o }));
             }
         }
 

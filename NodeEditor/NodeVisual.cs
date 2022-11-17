@@ -44,6 +44,7 @@ namespace NodeEditor
         internal int Order { get; set; }
         public bool IsInteractive { get; set; }
         public bool IsSelected { get; set; }
+        public bool InvokeOnLoad { get; set; }
         public FeedbackType Feedback { get; set; }
         public Control CustomEditor { get; internal set; }
         public string GUID = Guid.NewGuid().ToString();
@@ -68,11 +69,6 @@ namespace NodeEditor
         internal NodeVisual(double x0, double y0) : base(new RoundedRect(new Microsoft.Msagl.Core.Geometry.Rectangle(x0, y0, x0, y0), 1, 1))
         {
             Feedback = FeedbackType.Debug;
-        }
-
-        public string GetGuid()
-        {
-            return GUID;
         }
 
         internal (List<SocketVisual> Inputs, List<SocketVisual> Outputs, List<SocketVisual> All) GetSockets()
@@ -124,16 +120,6 @@ namespace NodeEditor
             return (_inputSocketsCache, _outputSocketsCache, _allSocketsOrdered);
         }
 
-        internal ParameterInfo[] GetInputs()
-        {
-            return MethodInf.GetParameters().Where(x => !x.IsOut).OrderBy(x => x.Position).ToArray();
-        }
-
-        internal ParameterInfo[] GetOutputs()
-        {
-            return MethodInf.GetParameters().Where(x => x.IsOut).OrderBy(x => x.Position).ToArray();
-        }
-
         /// <summary>
         /// Returns current size of the node.
         /// </summary>        
@@ -169,15 +155,6 @@ namespace NodeEditor
 
             return new SizeF((float)this.BoundingBox.Width, (float)this.BoundingBox.Height);
 ;
-        }
-
-        /// <summary>
-        /// Returns current size of node caption (header belt).
-        /// </summary>
-        /// <returns></returns>
-        public SizeF GetHeaderSize()
-        {
-            return new SizeF(GetNodeBounds().Width, HeaderHeight);
         }
 
         /// <summary>
@@ -234,8 +211,7 @@ namespace NodeEditor
                 g.DrawString(Name, SystemFonts.DefaultFont, Brushes.Black, new PointF((float)this.X + 3, (float)this.Y + HeaderHeight / 4));
             }
 
-            var sockets = GetSockets();
-            foreach (var socet in sockets.Inputs.Concat(sockets.Outputs))
+            foreach (var socet in GetSockets().All)
             {
                 socet.Draw(g, mouseLocation, mouseButtons);
             }
