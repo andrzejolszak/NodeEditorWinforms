@@ -20,18 +20,17 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace NodeEditor
 {
-    internal class NodesGraph
+    public class NodesGraph
     {
         private const int HoverThrottlingMs = 10;
-        internal List<NodeVisual> Nodes = new List<NodeVisual>();
+        public List<NodeVisual> Nodes = new List<NodeVisual>();
         internal List<NodeConnection> Connections = new List<NodeConnection>();
         internal KDTree<float, NodeConnection> KdTree = null;
         private List<(NodeConnection, PointF[])> _points = new List<(NodeConnection, PointF[])>();
@@ -39,6 +38,8 @@ namespace NodeEditor
         private bool _treeRecalc = false;
         private bool _hoverRecalc = false;
         private NodeConnection _hoverConnection;
+
+        public string GUID = Guid.NewGuid().ToString();
 
         public void Draw(Graphics g, Point mouseLocation, MouseButtons mouseButtons)
         {
@@ -190,6 +191,221 @@ namespace NodeEditor
             result.Y = a.Y*(1f - amount) + b.Y*amount;
 
             return result;
+        }
+
+        /// <summary>
+        /// Restores node graph state from previously serialized binary data.
+        /// </summary>
+        /// <param name="data"></param>
+        public static NodesGraph[] Deserialize(byte[] data, INodesContext context)
+        {
+            List<(NodeVisual, string)> nodesWithSubsystems = new List<(NodeVisual, string)>();
+            List<NodesGraph> graphs = new List<NodesGraph>();
+            using (var br = new BinaryReader(new MemoryStream(data)))
+            {
+                var ident = br.ReadString();
+                if (ident != "NodeSystemP") return null;
+                var version = br.ReadInt32();
+
+                var graphCount = br.ReadInt32();
+
+                for (int g = 0; g < graphCount; g++)
+                {
+                    NodesGraph graph = new NodesGraph();
+                    var graphGuid = br.ReadString();
+                    graph.GUID = graphGuid;
+                    graphs.Add(graph);
+
+                    int nodeCount = br.ReadInt32();
+                    for (int i = 0; i < nodeCount; i++)
+                    {
+                        var nv = DeserializeNode(br, context);
+                        if (nv.Item1 != null)
+                        {
+                            graph.Nodes.Add(nv.Item1);
+                            nodesWithSubsystems.Add(nv);
+                        }
+                    }
+
+                    var connectionsCount = br.ReadInt32();
+                    for (int i = 0; i < connectionsCount; i++)
+                    {
+                        var og = br.ReadString();
+                        NodeVisual outputNode = graph.Nodes.FirstOrDefault(x => x.GUID == og);
+                        string outputSocketName = br.ReadString();
+                        var ig = br.ReadString();
+                        NodeVisual inputNode = graph.Nodes.FirstOrDefault(x => x.GUID == ig);
+                        string inputSocketName = br.ReadString();
+                        var con = new NodeConnection(outputNode, outputSocketName, inputNode, inputSocketName);
+                        br.ReadBytes(br.ReadInt32()); //read additional data
+
+                        graph.Connections.Add(con);
+                    }
+
+                    br.ReadBytes(br.ReadInt32()); //read additional data
+                }
+            }
+
+            // Assign subsystems
+            foreach ((NodeVisual, string) nodesWithSubsystem in nodesWithSubsystems)
+            {
+                if (nodesWithSubsystem.Item2 != null && nodesWithSubsystem.Item2 != "")
+                {
+                    nodesWithSubsystem.Item1.SubsystemGraph = graphs.Single(x => x.GUID == nodesWithSubsystem.Item2);
+                }
+            }
+
+            return graphs.ToArray();
+        }
+
+        /// <summary>
+        /// Serializes current node graph to binary data.
+        /// </summary>        
+        public static byte[] Serialize(NodesGraph mainGraph)
+        {
+            List<NodesGraph> graphs = new List<NodesGraph>() { mainGraph };
+            graphs.AddRange(mainGraph.Nodes.Where(x => x.SubsystemGraph != null).Select(x => x.SubsystemGraph));
+            using (var bw = new BinaryWriter(new MemoryStream()))
+            {
+                bw.Write("NodeSystemP"); //recognization string
+                bw.Write(1000); //version
+
+                bw.Write(graphs.Count);
+
+                foreach (NodesGraph graph in graphs)
+                {
+                    bw.Write(graph.GUID);
+                    bw.Write(graph.Nodes.Count);
+                    foreach (var node in graph.Nodes)
+                    {
+                        SerializeNode(bw, node);
+                    }
+
+                    bw.Write(graph.Connections.Count);
+                    foreach (var connection in graph.Connections)
+                    {
+                        bw.Write(connection.OutputNode.GUID);
+                        bw.Write(connection.OutputSocketName);
+
+                        bw.Write(connection.InputNode.GUID);
+                        bw.Write(connection.InputSocketName);
+                        bw.Write(0); //additional data size per connection
+                    }
+
+                    bw.Write(0); //additional data size per graph
+                }
+
+                return (bw.BaseStream as MemoryStream).ToArray();
+            }
+        }
+
+        public static void SerializeNode(BinaryWriter bw, NodeVisual node)
+        {
+            bw.Write(node.GUID);
+            bw.Write(node.X);
+            bw.Write(node.Y);
+            bw.Write(node.IsInteractive);
+            bw.Write(node.Name);
+            bw.Write(node.Order);
+            if (node.CustomEditor == null)
+            {
+                bw.Write("");
+                bw.Write("");
+            }
+            else
+            {
+                bw.Write(node.CustomEditor.GetType().Assembly.GetName().Name);
+                bw.Write(node.CustomEditor.GetType().FullName);
+            }
+            bw.Write(node.MethodInf.Name);
+            bw.Write(node.SubsystemGraph?.GUID ?? "");
+            bw.Write(8); //additional data size per node
+            bw.Write(node.Int32Tag);
+            bw.Write(node.NodeColor.ToArgb());
+        }
+
+        public static (NodeVisual, string) DeserializeNode(BinaryReader br, INodesContext context)
+        {
+            string id = br.ReadString();
+            var loadedNode = new NodeVisual(br.ReadSingle(), br.ReadSingle());
+            loadedNode.GUID = id;
+            loadedNode.IsInteractive = br.ReadBoolean();
+            loadedNode.Name = br.ReadString();
+            loadedNode.Order = br.ReadInt32();
+            var customEditorAssembly = br.ReadString();
+            var customEditor = br.ReadString();
+            loadedNode.MethodInf = context.GetType().GetMethod(br.ReadString());
+            string subsystemGuid = br.ReadString();
+
+            if (loadedNode.MethodInf is null)
+            {
+                br.ReadBytes(br.ReadInt32());
+                var additional2 = br.ReadInt32(); //read additional data
+                if (additional2 >= 4)
+                {
+                    loadedNode.Int32Tag = br.ReadInt32();
+                    if (additional2 >= 8)
+                    {
+                        loadedNode.NodeColor = Color.FromArgb(br.ReadInt32());
+                    }
+                }
+                if (additional2 > 8)
+                {
+                    br.ReadBytes(additional2 - 8);
+                }
+
+                return (null, null);
+            }
+
+            var attribute = loadedNode.MethodInf.GetCustomAttributes(typeof(NodeAttribute), false)
+                                        .Cast<NodeAttribute>()
+                                        .FirstOrDefault();
+            if (attribute != null)
+            {
+                loadedNode.CustomWidth = attribute.Width;
+                loadedNode.CustomHeight = attribute.Height;
+                loadedNode.InvokeOnLoad = attribute.InvokeOnLoad;
+            }
+
+            var additional = br.ReadInt32(); //read additional data
+            if (additional >= 4)
+            {
+                loadedNode.Int32Tag = br.ReadInt32();
+                if (additional >= 8)
+                {
+                    loadedNode.NodeColor = Color.FromArgb(br.ReadInt32());
+                }
+            }
+            if (additional > 8)
+            {
+                br.ReadBytes(additional - 8);
+            }
+
+            if (customEditor != "")
+            {
+                if (customEditor == "System.Windows.Forms.Label")
+                {
+                    loadedNode.CustomEditor = new Label();
+                }
+                else if (customEditor == "System.Windows.Forms.TextBox")
+                {
+                    loadedNode.CustomEditor = new TextBox();
+                }
+                else
+                {
+                    loadedNode.CustomEditor = Activator.CreateInstance(AppDomain.CurrentDomain, customEditorAssembly, customEditor).Unwrap() as Control;
+                }
+
+                Control ctrl = loadedNode.CustomEditor;
+                if (ctrl != null)
+                {
+                    ctrl.BackColor = loadedNode.NodeColor;
+                    ctrl.Tag = (loadedNode, context);
+                }
+
+                loadedNode.LayoutEditor();
+            }
+            return (loadedNode, subsystemGuid);
         }
     }
 }

@@ -31,7 +31,10 @@ namespace NodeEditor
     /// </summary>
     public class NodeVisual : Node
     {
-        public const string NewName = "*new*";
+        public const string NewSpecialNodeName = "*new*";
+        public const string NewSubsystemNodeNamePrefix = "*s*";
+        public const string NewSubsystemInputNodeNamePrefix = "*i*";
+        public const string NewSubsystemOutputNodeNamePrefix = "*o*";
         public const float NodeWidth = 140;
         public const float HeaderHeight = 32;
 
@@ -53,11 +56,12 @@ namespace NodeEditor
         private List<SocketVisual> _outputSocketsCache;
         private List<SocketVisual> _allSocketsOrdered;
 
+        public NodesGraph SubsystemGraph { get; set; }
+
         /// <summary>
         /// Tag for various puposes - may be used freely.
         /// </summary>
         public int Int32Tag = 0;
-        public string XmlExportName { get; internal set; }
 
         internal int CustomWidth = -1;
         internal int CustomHeight = -1;
@@ -131,7 +135,7 @@ namespace NodeEditor
             }
 
             var csize = new SizeF();
-            if (CustomEditor != null && CustomEditor.ClientSize != default && this.Name != NewName)
+            if (CustomEditor != null && CustomEditor.ClientSize != default && this.Name != NewSpecialNodeName)
             {
                 csize = new SizeF(CustomEditor.ClientSize.Width, CustomEditor.ClientSize.Height + HeaderHeight + 8);                
             }
@@ -206,7 +210,7 @@ namespace NodeEditor
                 g.DrawLine(Pens.Black, rect.X + rect.Width - 5, rect.Y, rect.X + rect.Width - 5, rect.Y + rect.Height);
             }
 
-            if (this.Name != NewName)
+            if (this.Name != NewSpecialNodeName)
             {
                 g.DrawString(Name, SystemFonts.DefaultFont, Brushes.Black, new PointF((float)this.X + 3, (float)this.Y + HeaderHeight / 4));
             }
@@ -241,7 +245,7 @@ namespace NodeEditor
         {
             if (CustomEditor != null)
             {
-                if (this.Name == NewName)
+                if (this.Name == NewSpecialNodeName)
                 {
                     CustomEditor.Location = new Point((int)this.X + 4, (int)this.Y + 8);
                 }

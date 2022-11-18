@@ -1,5 +1,8 @@
-﻿using System;
+﻿using NodeEditor;
+using SampleCommon;
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 
@@ -15,7 +18,13 @@ namespace MathSample
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new FormMathSample());
+
+            MathContext context = new MathContext();
+            NodesGraph[] graphs = NodesGraph.Deserialize(File.ReadAllBytes("..\\..\\default.nds"), context);
+            FormMathSample gui = new FormMathSample(context, graphs[0], graphs);
+            gui.FormClosing += (e, s) => File.WriteAllBytes("..\\..\\default.nds", NodesGraph.Serialize(gui.mainGraph));
+
+            Application.Run(gui);
         }
     }
 }

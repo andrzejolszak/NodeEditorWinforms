@@ -1,25 +1,24 @@
 ﻿using NodeEditor;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Data;
-using System.Drawing;
-using System.IO;
 using System.Linq;
-using System.Text;
 using System.Windows.Forms;
 
 namespace MathSample
 {
     public partial class FormMathSample : Form
     {
-        //Context that will be used for our nodes
-        MathContext context;
+        public MathContext context;
+        public NodesGraph mainGraph;
+        public NodesGraph[] allGraphs;
 
-        public FormMathSample()
+        public FormMathSample(MathContext context, NodesGraph mainGraph, NodesGraph[] allGraphs)
         {
             InitializeComponent();
-            this.context = new MathContext();
+            this.context = context;
+            this.mainGraph = mainGraph;
+            this.allGraphs = allGraphs;
         }
 
         private void FormMathSample_Load(object sender, EventArgs e)
@@ -29,21 +28,27 @@ namespace MathSample
             controlNodeEditor.nodesControl.OnNodeSelected += NodesControlOnOnNodeContextSelected; 
             
             //Loading sample from file
-            controlNodeEditor.nodesControl.Deserialize(File.ReadAllBytes("..\\..\\default.nds"));
+            controlNodeEditor.nodesControl.MainGraph = mainGraph;
+            controlNodeEditor.nodesControl.AllGraphs = this.allGraphs.ToDictionary(x => x.GUID);
+            controlNodeEditor.nodesControl.Controls.Clear();
+            controlNodeEditor.nodesControl.Controls.AddRange(mainGraph.Nodes.Where(x => x.CustomEditor != null).Select(x => x.CustomEditor).ToArray());
+            controlNodeEditor.nodesControl.Refresh();
 
-            this.FormClosing += FormMathSample_FormClosing;
+            controlNodeEditor.nodesControl.OnSubgraphOpenRequest += NodesControl_OnSubgraphOpenRequest;
         }
 
-        private void FormMathSample_FormClosing(object sender, FormClosingEventArgs e)
+        private void NodesControl_OnSubgraphOpenRequest(NodeVisual obj)
         {
-            File.WriteAllBytes("..\\..\\default.nds", controlNodeEditor.nodesControl.Serialize());
+            FormMathSample newForm = new FormMathSample(this.context, obj.SubsystemGraph, allGraphs.Except<NodesGraph>(new[] { this.mainGraph }).ToArray());
+            newForm.Parent = this;
+            newForm.Show();
         }
 
         private void NodesControlOnOnNodeContextSelected(NodeVisual o)
         {
             if (controlNodeEditor.nodesControl.IsRunMode && o.IsInteractive)
             {
-                controlNodeEditor.nodesControl.Execute(new Queue<NodeVisual>(new[]{ o }));
+                controlNodeEditor.nodesControl.Execute(new Stack<NodeVisual>(new[]{ o }));
             }
         }
 

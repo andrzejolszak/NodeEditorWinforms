@@ -65,11 +65,6 @@ namespace NodeEditor
         public Type CustomEditor { get; set; }
 
         /// <summary>
-        /// Name that will be used in the xml export of the graph.
-        /// </summary>
-        public string XmlExportName { get; set; }
-
-        /// <summary>
         /// Width of single node
         /// </summary>
         public int Width { get; set; }
@@ -95,7 +90,7 @@ namespace NodeEditor
         /// <param name="width">Width of single node, or Auto if not determined</param>
         /// <param name="height">Height of single node, or Auto if not determined</param>
         public NodeAttribute(string name = "Node", string menu = "", string category = "General",
-            string description = "Some node.", bool isInteractive = false, Type customEditor = null, string xmlExportName = "",
+            string description = "Some node.", bool isInteractive = false, Type customEditor = null,
             int width = Auto, int height = Auto, bool invokeOnLoad = false)
         {
             Name = name;
@@ -104,7 +99,6 @@ namespace NodeEditor
             Description = description;
             IsInteractive = isInteractive;
             CustomEditor = customEditor;
-            XmlExportName = xmlExportName;
             Width = width;
             Height = height;
             InvokeOnLoad = invokeOnLoad;
