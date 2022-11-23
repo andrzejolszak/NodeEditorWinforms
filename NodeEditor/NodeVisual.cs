@@ -155,21 +155,32 @@ namespace NodeEditor
                     // TODO: hot sockets
                     // TODO: probably create new socket objects?
                     // TOOD: clean connections? or refer only by name?
+                    float inlParamsCount = this.SubsystemGraph.Nodes.Count(x => x.Type == NodeType.Inlet);
+                    float outlParamsCount = this.SubsystemGraph.Nodes.Count(x => x.Type == NodeType.Outlet);
+
                     foreach (NodeVisual sn in this.SubsystemGraph.Nodes)
                     {
                         if (sn.Type == NodeType.Inlet)
                         {
                             (List<SocketVisual> Inputs, List<SocketVisual> Outputs, List<SocketVisual> All) = sn.GetSockets();
                             SocketVisual inPassthrough = Inputs.Single();
-                            inputSocketList.Add(inPassthrough);
-                            allSocketsList.Add(inPassthrough);
+                            SocketVisual newInPassthrough = new SocketVisual(this, new Microsoft.Msagl.Core.Geometry.Point(inputSocketList.Count/inlParamsCount * this.Width - this.Width/2, -this.Height / 2));
+                            newInPassthrough.Type = inPassthrough.Type;
+                            newInPassthrough.Name = inPassthrough.ParentNode.Name;
+                            newInPassthrough.Input = true;
+                            newInPassthrough.HotInput = true;
+                            inputSocketList.Add(newInPassthrough);
+                            allSocketsList.Add(newInPassthrough);
                         }
                         else if (sn.Type == NodeType.Outlet)
                         {
                             (List<SocketVisual> Inputs, List<SocketVisual> Outputs, List<SocketVisual> All) = sn.GetSockets();
                             SocketVisual outPassthrough = Outputs.Single();
-                            outputSocketList.Add(outPassthrough);
-                            allSocketsList.Add(outPassthrough);
+                            SocketVisual newOutPassthrough = new SocketVisual(this, new Microsoft.Msagl.Core.Geometry.Point(outputSocketList.Count/outlParamsCount * this.Width, this.Height / 2 - SocketVisual.SocketHeight));
+                            newOutPassthrough.Type = outPassthrough.Type;
+                            newOutPassthrough.Name = outPassthrough.ParentNode.Name;
+                            outputSocketList.Add(newOutPassthrough);
+                            allSocketsList.Add(newOutPassthrough);
                         }
                     }
                 }

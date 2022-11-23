@@ -426,6 +426,7 @@ namespace NodeEditor
                 if (ee.KeyChar == (char)Keys.Enter)
                 {
                     SwapNode();
+                    ee.Handled = true;
                 }
             };
 
@@ -695,7 +696,14 @@ namespace NodeEditor
                 {
                     if (connection.InputSocket.HotInput)
                     {
-                        nodeQueue.Push(connection.InputNode);
+                        if (connection.InputNode.Type == NodeVisual.NodeType.Subsystem)
+                        {
+                            nodeQueue.Push(connection.InputNode.SubsystemGraph.Nodes.Single(x => x.Name == connection.InputSocketName));
+                        }
+                        else
+                        {
+                            nodeQueue.Push(connection.InputNode);
+                        }
                     }
                 }
             }
