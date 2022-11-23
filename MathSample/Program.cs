@@ -21,7 +21,7 @@ namespace MathSample
 
             MathContext context = new MathContext();
             NodesGraph[] graphs = NodesGraph.Deserialize(File.ReadAllBytes("..\\..\\default.nds"), context);
-            FormMathSample gui = new FormMathSample(context, graphs[0], graphs);
+            FormMathSample gui = new FormMathSample(context, graphs[0]);
             gui.FormClosing += (e, s) => File.WriteAllBytes("..\\..\\default.nds", NodesGraph.Serialize(gui.mainGraph));
 
             Application.Run(gui);

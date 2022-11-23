@@ -11,14 +11,12 @@ namespace MathSample
     {
         public MathContext context;
         public NodesGraph mainGraph;
-        public NodesGraph[] allGraphs;
 
-        public FormMathSample(MathContext context, NodesGraph mainGraph, NodesGraph[] allGraphs)
+        public FormMathSample(MathContext context, NodesGraph mainGraph)
         {
             InitializeComponent();
             this.context = context;
             this.mainGraph = mainGraph;
-            this.allGraphs = allGraphs;
         }
 
         private void FormMathSample_Load(object sender, EventArgs e)
@@ -29,7 +27,6 @@ namespace MathSample
             
             //Loading sample from file
             controlNodeEditor.nodesControl.MainGraph = mainGraph;
-            controlNodeEditor.nodesControl.AllGraphs = this.allGraphs.ToDictionary(x => x.GUID);
             controlNodeEditor.nodesControl.Controls.Clear();
             controlNodeEditor.nodesControl.Controls.AddRange(mainGraph.Nodes.Where(x => x.CustomEditor != null).Select(x => x.CustomEditor).ToArray());
             controlNodeEditor.nodesControl.Refresh();
@@ -39,7 +36,7 @@ namespace MathSample
 
         private void NodesControl_OnSubgraphOpenRequest(NodeVisual obj)
         {
-            FormMathSample newForm = new FormMathSample(this.context, obj.SubsystemGraph, allGraphs.Except<NodesGraph>(new[] { this.mainGraph }).ToArray());
+            FormMathSample newForm = new FormMathSample(this.context, obj.SubsystemGraph);
             newForm.Parent = this;
             newForm.Show();
         }

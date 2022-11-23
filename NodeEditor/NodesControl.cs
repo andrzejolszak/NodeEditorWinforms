@@ -33,7 +33,6 @@ namespace NodeEditor
     public partial class NodesControl : UserControl
     {
         public NodesGraph MainGraph { get; set; } = new NodesGraph();
-        public Dictionary<string, NodesGraph> AllGraphs { get; set; } = new Dictionary<string, NodesGraph>();
         private bool needRepaint = true;
         private Timer timer = new Timer();
         private bool mdown;
@@ -441,7 +440,7 @@ namespace NodeEditor
             AutocompleteMenuNS.AutocompleteMenu autocompleteMenu = new AutocompleteMenuNS.AutocompleteMenu();
             autocompleteMenu.Items = Context.GetType().GetMethods().Where(x => x.GetCustomAttributes(typeof(NodeAttribute), false).Any()).Select(x => x.Name.ToLowerInvariant())
                 .Concat(new[] { NodeVisual.NewSubsystemNodeNamePrefix, NodeVisual.NewSubsystemInputNodeNamePrefix, NodeVisual.NewSubsystemOutputNodeNamePrefix })
-                .Concat(AllGraphs.Where(x => x.Key != MainGraph.GUID).Select(x => NodeVisual.NewSubsystemNodeNamePrefix + " " + x.Key)).ToArray();
+                .ToArray();
             autocompleteMenu.SetAutocompleteMenu(tb, autocompleteMenu);
             autocompleteMenu.Selected += (_, eee) => SwapNode();
 
@@ -462,15 +461,10 @@ namespace NodeEditor
                         return;
                     }
 
-                    if (!AllGraphs.TryGetValue(name, out NodesGraph graph))
-                    {
-                        AllGraphs.Add(name, new NodesGraph() { GUID = name });
-                    }
-
                     replacementNode.MethodInf = this.DummyMethod();
                     replacementNode.Name = NodeVisual.NewSubsystemNodeNamePrefix + " " + name;
                     replacementNode.Order = MainGraph.Nodes.Count;
-                    replacementNode.SubsystemGraph = AllGraphs[name];
+                    replacementNode.SubsystemGraph = new NodesGraph() { GUID = name };
                 }
                 else if (tb.Text.StartsWith(NodeVisual.NewSubsystemInputNodeNamePrefix))
                 {
