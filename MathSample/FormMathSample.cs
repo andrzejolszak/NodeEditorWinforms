@@ -11,12 +11,20 @@ namespace MathSample
     {
         public MathContext context;
         public NodesGraph mainGraph;
+        private NodeVisual owner;
 
-        public FormMathSample(MathContext context, NodesGraph mainGraph)
+        public FormMathSample(MathContext context, NodesGraph mainGraph, NodeVisual owner)
         {
             InitializeComponent();
             this.context = context;
             this.mainGraph = mainGraph;
+            this.owner = owner;
+            this.FormClosing += FormMathSample_FormClosing;
+        }
+
+        private void FormMathSample_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            owner?.ResetSocketsCache();
         }
 
         private void FormMathSample_Load(object sender, EventArgs e)
@@ -36,7 +44,7 @@ namespace MathSample
 
         private void NodesControl_OnSubgraphOpenRequest(NodeVisual obj)
         {
-            FormMathSample newForm = new FormMathSample(this.context, obj.SubsystemGraph);
+            FormMathSample newForm = new FormMathSample(this.context, obj.SubsystemGraph, obj);
             newForm.Show();
         }
 

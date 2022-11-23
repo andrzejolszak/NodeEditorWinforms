@@ -24,6 +24,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Windows.Forms;
+using System.Xml.Linq;
 
 namespace NodeEditor
 {
@@ -409,9 +410,8 @@ namespace NodeEditor
                 return;
             }
 
-            var newAutocompleteNode = new NodeVisual(lastMouseLocation.X, lastMouseLocation.Y - NodeVisual.HeaderHeight);
+            var newAutocompleteNode = new NodeVisual(NodeVisual.NewSpecialNodeName, lastMouseLocation.X, lastMouseLocation.Y - NodeVisual.HeaderHeight);
             newAutocompleteNode.IsInteractive = false;
-            newAutocompleteNode.Name = NodeVisual.NewSpecialNodeName;
             newAutocompleteNode.Order = MainGraph.Nodes.Count;
             newAutocompleteNode.CustomWidth = -1;
             newAutocompleteNode.CustomHeight = -1;
@@ -436,7 +436,7 @@ namespace NodeEditor
 
             AutocompleteMenuNS.AutocompleteMenu autocompleteMenu = new AutocompleteMenuNS.AutocompleteMenu();
             autocompleteMenu.Items = Context.GetType().GetMethods().Where(x => x.GetCustomAttributes(typeof(NodeAttribute), false).Any()).Select(x => x.Name.ToLowerInvariant())
-                .Concat(new[] { NodeVisual.NewSubsystemNodeNamePrefix, NodeVisual.NewSubsystemInputNodeNamePrefix, NodeVisual.NewSubsystemOutputNodeNamePrefix })
+                .Concat(new[] { NodeVisual.NewSubsystemNodeNamePrefix, NodeVisual.NewSubsystemInletNodeNamePrefix, NodeVisual.NewSubsystemOutletNodeNamePrefix })
                 .ToArray();
             autocompleteMenu.SetAutocompleteMenu(tb, autocompleteMenu);
             autocompleteMenu.Selected += (_, eee) => SwapNode();
@@ -448,7 +448,7 @@ namespace NodeEditor
 
             void SwapNode()
             {
-                NodeVisual replacementNode = new NodeVisual(newAutocompleteNode.X, newAutocompleteNode.Y);
+                NodeVisual replacementNode = null;
 
                 if (tb.Text.StartsWith(NodeVisual.NewSubsystemNodeNamePrefix))
                 {
@@ -458,30 +458,30 @@ namespace NodeEditor
                         return;
                     }
 
-                    replacementNode.Name = NodeVisual.NewSubsystemNodeNamePrefix + " " + name;
+                    replacementNode = new NodeVisual(NodeVisual.NewSubsystemNodeNamePrefix + " " + name, newAutocompleteNode.X, newAutocompleteNode.Y);
                     replacementNode.Order = MainGraph.Nodes.Count;
                     replacementNode.SubsystemGraph = new NodesGraph() { GUID = name };
                 }
-                else if (tb.Text.StartsWith(NodeVisual.NewSubsystemInputNodeNamePrefix))
+                else if (tb.Text.StartsWith(NodeVisual.NewSubsystemInletNodeNamePrefix))
                 {
-                    string name = tb.Text.Substring(NodeVisual.NewSubsystemInputNodeNamePrefix.Length).Trim();
-                    if (name == "" || this.MainGraph.Nodes.Any(x => x.Name == NodeVisual.NewSubsystemInputNodeNamePrefix + " " + name))
+                    string name = tb.Text.Substring(NodeVisual.NewSubsystemInletNodeNamePrefix.Length).Trim();
+                    if (name == "" || this.MainGraph.Nodes.Any(x => x.Name == NodeVisual.NewSubsystemInletNodeNamePrefix + " " + name))
                     {
                         return;
                     }
 
-                    replacementNode.Name = NodeVisual.NewSubsystemInputNodeNamePrefix + " " + name;
+                    replacementNode = new NodeVisual(NodeVisual.NewSubsystemInletNodeNamePrefix + " " + name, newAutocompleteNode.X, newAutocompleteNode.Y);
                     replacementNode.Order = MainGraph.Nodes.Count;
                 }
-                else if (tb.Text.StartsWith(NodeVisual.NewSubsystemOutputNodeNamePrefix))
+                else if (tb.Text.StartsWith(NodeVisual.NewSubsystemOutletNodeNamePrefix))
                 {
-                    string name = tb.Text.Substring(NodeVisual.NewSubsystemOutputNodeNamePrefix.Length).Trim();
-                    if (name == "" || this.MainGraph.Nodes.Any(x => x.Name == NodeVisual.NewSubsystemOutputNodeNamePrefix + " " + name))
+                    string name = tb.Text.Substring(NodeVisual.NewSubsystemOutletNodeNamePrefix.Length).Trim();
+                    if (name == "" || this.MainGraph.Nodes.Any(x => x.Name == NodeVisual.NewSubsystemOutletNodeNamePrefix + " " + name))
                     {
                         return;
                     }
 
-                    replacementNode.Name = NodeVisual.NewSubsystemOutputNodeNamePrefix + " " + name;
+                    replacementNode = new NodeVisual(NodeVisual.NewSubsystemOutletNodeNamePrefix + " " + name, newAutocompleteNode.X, newAutocompleteNode.Y);
                     replacementNode.Order = MainGraph.Nodes.Count;
                 }
                 else
@@ -501,9 +501,9 @@ namespace NodeEditor
                         return;
                     }
 
+                    replacementNode = new NodeVisual(attrib.Name, newAutocompleteNode.X, newAutocompleteNode.Y);
                     replacementNode.MethodInf = info;
                     replacementNode.IsInteractive = attrib.IsInteractive;
-                    replacementNode.Name = attrib.Name;
                     replacementNode.Order = MainGraph.Nodes.Count;
                     replacementNode.CustomWidth = attrib.Width;
                     replacementNode.CustomHeight = attrib.Height;

@@ -328,10 +328,14 @@ namespace NodeEditor
         public static (NodeVisual, string) DeserializeNode(BinaryReader br, INodesContext context)
         {
             string id = br.ReadString();
-            var loadedNode = new NodeVisual(br.ReadSingle(), br.ReadSingle());
+            float x = br.ReadSingle();
+            float y = br.ReadSingle();
+            bool isInteractive = br.ReadBoolean();
+            string name = br.ReadString();
+
+            var loadedNode = new NodeVisual(name, x, y);
+            loadedNode.IsInteractive = isInteractive;
             loadedNode.GUID = id;
-            loadedNode.IsInteractive = br.ReadBoolean();
-            loadedNode.Name = br.ReadString();
             loadedNode.Order = br.ReadInt32();
             var customEditorAssembly = br.ReadString();
             var customEditor = br.ReadString();

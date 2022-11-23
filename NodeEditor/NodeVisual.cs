@@ -21,6 +21,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using System.Net.Sockets;
 using System.Reflection;
 using System.Windows.Forms;
 
@@ -31,17 +32,26 @@ namespace NodeEditor
     /// </summary>
     public class NodeVisual : Node
     {
+        public enum NodeType
+        {
+            Normal,
+            New,
+            Subsystem,
+            Inlet,
+            Outlet
+        }
+
         public const string NewSpecialNodeName = "*new*";
         public const string NewSubsystemNodeNamePrefix = "*s*";
-        public const string NewSubsystemInputNodeNamePrefix = "*i*";
-        public const string NewSubsystemOutputNodeNamePrefix = "*o*";
+        public const string NewSubsystemInletNodeNamePrefix = "*i*";
+        public const string NewSubsystemOutletNodeNamePrefix = "*o*";
         public const float NodeWidth = 140;
         public const float HeaderHeight = 32;
 
         /// <summary>
         /// Current node name.
         /// </summary>
-        public string Name { get; set; }
+        public string Name { get; private set; }
 
         internal MethodInfo MethodInf { get; set; }
         internal int Order { get; set; }
@@ -70,9 +80,40 @@ namespace NodeEditor
 
         public float Y => (float)this.BoundingBox.Bottom;
 
-        internal NodeVisual(double x0, double y0) : base(new RoundedRect(new Microsoft.Msagl.Core.Geometry.Rectangle(x0, y0, x0, y0), 1, 1))
+        public NodeType Type { get; private set; }
+
+        internal NodeVisual(string name, double x0, double y0) : base(new RoundedRect(new Microsoft.Msagl.Core.Geometry.Rectangle(x0, y0, x0, y0), 1, 1))
         {
-            Feedback = FeedbackType.Debug;
+            this.Feedback = FeedbackType.Debug;
+            this.Name = name;
+            
+            if (name == NewSpecialNodeName)
+            {
+                this.Type = NodeType.New;
+            }
+            else if (name.StartsWith(NewSubsystemNodeNamePrefix))
+            {
+                this.Type = NodeType.Subsystem;
+            }
+            else if (name.StartsWith(NewSubsystemInletNodeNamePrefix))
+            {
+                this.Type = NodeType.Inlet;
+            }
+            else if (name.StartsWith(NewSubsystemOutletNodeNamePrefix))
+            {
+                this.Type = NodeType.Outlet;
+            }
+            else
+            {
+                this.Type = NodeType.Normal;
+            }
+        }
+
+        public void ResetSocketsCache()
+        {
+            this._inputSocketsCache = null;
+            this._outputSocketsCache = null;
+            this._allSocketsOrdered = null;
         }
 
         internal (List<SocketVisual> Inputs, List<SocketVisual> Outputs, List<SocketVisual> All) GetSockets()
@@ -88,9 +129,55 @@ namespace NodeEditor
 
             if (MethodInf is null)
             {
+                if (this.Type == NodeType.Inlet || this.Type == NodeType.Outlet)
+                {
+                    {
+                        SocketVisual inSocket = new SocketVisual(this, new Microsoft.Msagl.Core.Geometry.Point(0, -this.Height / 2));
+                        inSocket.Type = typeof(object);
+                        inSocket.Name = "in-passthrough";
+                        inSocket.Input = true;
+                        inSocket.HotInput = true;
+                        inputSocketList.Add(inSocket);
+                        allSocketsList.Add(inSocket);
+                    }
+
+                    {
+                        SocketVisual outSocket = new SocketVisual(this, new Microsoft.Msagl.Core.Geometry.Point(0, this.Height / 2 - SocketVisual.SocketHeight));
+                        outSocket.Type = typeof(object);
+                        outSocket.Name = "out-passthrough";
+                        outputSocketList.Add(outSocket);
+                        allSocketsList.Add(outSocket);
+                    }
+                }
+                else if (this.Type == NodeType.Subsystem)
+                {
+                    // TODO will need to invalidate this cache
+                    // TODO: hot sockets
+                    // TODO: probably create new socket objects?
+                    // TOOD: clean connections? or refer only by name?
+                    foreach (NodeVisual sn in this.SubsystemGraph.Nodes)
+                    {
+                        if (sn.Type == NodeType.Inlet)
+                        {
+                            (List<SocketVisual> Inputs, List<SocketVisual> Outputs, List<SocketVisual> All) = sn.GetSockets();
+                            SocketVisual inPassthrough = Inputs.Single();
+                            inputSocketList.Add(inPassthrough);
+                            allSocketsList.Add(inPassthrough);
+                        }
+                        else if (sn.Type == NodeType.Outlet)
+                        {
+                            (List<SocketVisual> Inputs, List<SocketVisual> Outputs, List<SocketVisual> All) = sn.GetSockets();
+                            SocketVisual outPassthrough = Outputs.Single();
+                            outputSocketList.Add(outPassthrough);
+                            allSocketsList.Add(outPassthrough);
+                        }
+                    }
+                }
+
                 _outputSocketsCache = outputSocketList;
                 _inputSocketsCache = inputSocketList;
                 _allSocketsOrdered = allSocketsList;
+
                 return (_inputSocketsCache, _outputSocketsCache, _allSocketsOrdered);
             }
 
