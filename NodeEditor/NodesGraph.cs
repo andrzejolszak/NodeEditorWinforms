@@ -22,6 +22,7 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -317,7 +318,7 @@ namespace NodeEditor
                 bw.Write(node.CustomEditor.GetType().Assembly.GetName().Name);
                 bw.Write(node.CustomEditor.GetType().FullName);
             }
-            bw.Write(node.MethodInf.Name);
+            bw.Write(node.MethodInf?.Name ?? "");
             bw.Write(node.SubsystemGraph?.GUID ?? "");
             bw.Write(8); //additional data size per node
             bw.Write(node.Int32Tag);
@@ -334,30 +335,11 @@ namespace NodeEditor
             loadedNode.Order = br.ReadInt32();
             var customEditorAssembly = br.ReadString();
             var customEditor = br.ReadString();
-            loadedNode.MethodInf = context.GetType().GetMethod(br.ReadString());
+            string method = br.ReadString();
+            loadedNode.MethodInf = context.GetType().GetMethod(method);
             string subsystemGuid = br.ReadString();
 
-            if (loadedNode.MethodInf is null)
-            {
-                br.ReadBytes(br.ReadInt32());
-                var additional2 = br.ReadInt32(); //read additional data
-                if (additional2 >= 4)
-                {
-                    loadedNode.Int32Tag = br.ReadInt32();
-                    if (additional2 >= 8)
-                    {
-                        loadedNode.NodeColor = Color.FromArgb(br.ReadInt32());
-                    }
-                }
-                if (additional2 > 8)
-                {
-                    br.ReadBytes(additional2 - 8);
-                }
-
-                return (null, null);
-            }
-
-            var attribute = loadedNode.MethodInf.GetCustomAttributes(typeof(NodeAttribute), false)
+            var attribute = loadedNode.MethodInf?.GetCustomAttributes(typeof(NodeAttribute), false)
                                         .Cast<NodeAttribute>()
                                         .FirstOrDefault();
             if (attribute != null)

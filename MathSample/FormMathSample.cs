@@ -37,7 +37,6 @@ namespace MathSample
         private void NodesControl_OnSubgraphOpenRequest(NodeVisual obj)
         {
             FormMathSample newForm = new FormMathSample(this.context, obj.SubsystemGraph);
-            newForm.Parent = this;
             newForm.Show();
         }
 

@@ -395,8 +395,6 @@ namespace NodeEditor
             needRepaint = true;
         }
 
-        public MethodInfo DummyMethod() => MethodInfo.GetCurrentMethod() as MethodInfo;
-
         private void NodesControl_DoubleMouseClick(object sender, MouseEventArgs e)
         {
             NodeVisual selectedNode = MainGraph.Nodes.FirstOrDefault(x => x.IsSelected);
@@ -412,7 +410,6 @@ namespace NodeEditor
             }
 
             var newAutocompleteNode = new NodeVisual(lastMouseLocation.X, lastMouseLocation.Y - NodeVisual.HeaderHeight);
-            newAutocompleteNode.MethodInf = this.DummyMethod();
             newAutocompleteNode.IsInteractive = false;
             newAutocompleteNode.Name = NodeVisual.NewSpecialNodeName;
             newAutocompleteNode.Order = MainGraph.Nodes.Count;
@@ -461,7 +458,6 @@ namespace NodeEditor
                         return;
                     }
 
-                    replacementNode.MethodInf = this.DummyMethod();
                     replacementNode.Name = NodeVisual.NewSubsystemNodeNamePrefix + " " + name;
                     replacementNode.Order = MainGraph.Nodes.Count;
                     replacementNode.SubsystemGraph = new NodesGraph() { GUID = name };
@@ -474,7 +470,6 @@ namespace NodeEditor
                         return;
                     }
 
-                    replacementNode.MethodInf = this.DummyMethod();
                     replacementNode.Name = NodeVisual.NewSubsystemInputNodeNamePrefix + " " + name;
                     replacementNode.Order = MainGraph.Nodes.Count;
                 }
@@ -486,7 +481,6 @@ namespace NodeEditor
                         return;
                     }
 
-                    replacementNode.MethodInf = this.DummyMethod();
                     replacementNode.Name = NodeVisual.NewSubsystemOutputNodeNamePrefix + " " + name;
                     replacementNode.Order = MainGraph.Nodes.Count;
                 }

@@ -86,6 +86,14 @@ namespace NodeEditor
             var outputSocketList = new List<SocketVisual>();
             var allSocketsList = new List<SocketVisual>();
 
+            if (MethodInf is null)
+            {
+                _outputSocketsCache = outputSocketList;
+                _inputSocketsCache = inputSocketList;
+                _allSocketsOrdered = allSocketsList;
+                return (_inputSocketsCache, _outputSocketsCache, _allSocketsOrdered);
+            }
+
             var NodeWidth = GetNodeBounds().Width;
 
             ParameterInfo[] parms = MethodInf.GetParameters().OrderBy(x => x.Position).ToArray();
@@ -224,6 +232,11 @@ namespace NodeEditor
         public void Execute(INodesContext context)
         {
             context.CurrentProcessingNode = this;
+
+            if (this.MethodInf is null)
+            {
+                return;
+            }
 
             _ = this.GetSockets();
             object[] parameters = this._allSocketsOrdered.Select(x => x.Input ? x.Value : null).ToArray();
