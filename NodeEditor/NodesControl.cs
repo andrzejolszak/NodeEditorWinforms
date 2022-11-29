@@ -415,6 +415,7 @@ namespace NodeEditor
             newAutocompleteNode.Order = MainGraph.Nodes.Count;
             newAutocompleteNode.CustomWidth = -1;
             newAutocompleteNode.CustomHeight = -1;
+            newAutocompleteNode.OwnerGraph = MainGraph;
 
             TextBox tb = new TextBox();
             tb.Width = (int)NodeVisual.NodeWidth - 4;
@@ -462,6 +463,8 @@ namespace NodeEditor
                     replacementNode = new NodeVisual(NodeVisual.NewSubsystemNodeNamePrefix + " " + name, newAutocompleteNode.X, newAutocompleteNode.Y);
                     replacementNode.Order = MainGraph.Nodes.Count;
                     replacementNode.SubsystemGraph = new NodesGraph() { GUID = name };
+                    replacementNode.SubsystemGraph.OwnerNode = replacementNode;
+                    replacementNode.OwnerGraph = MainGraph;
                 }
                 else if (tb.Text.StartsWith(NodeVisual.NewSubsystemInletNodeNamePrefix))
                 {
@@ -473,6 +476,7 @@ namespace NodeEditor
 
                     replacementNode = new NodeVisual(NodeVisual.NewSubsystemInletNodeNamePrefix + " " + name, newAutocompleteNode.X, newAutocompleteNode.Y);
                     replacementNode.Order = MainGraph.Nodes.Count;
+                    replacementNode.OwnerGraph = MainGraph;
                 }
                 else if (tb.Text.StartsWith(NodeVisual.NewSubsystemOutletNodeNamePrefix))
                 {
@@ -484,6 +488,7 @@ namespace NodeEditor
 
                     replacementNode = new NodeVisual(NodeVisual.NewSubsystemOutletNodeNamePrefix + " " + name, newAutocompleteNode.X, newAutocompleteNode.Y);
                     replacementNode.Order = MainGraph.Nodes.Count;
+                    replacementNode.OwnerGraph = MainGraph;
                 }
                 else
                 {
@@ -509,6 +514,7 @@ namespace NodeEditor
                     replacementNode.CustomWidth = attrib.Width;
                     replacementNode.CustomHeight = attrib.Height;
                     replacementNode.InvokeOnLoad = attrib.InvokeOnLoad;
+                    replacementNode.OwnerGraph = MainGraph;
 
                     if (attrib.CustomEditor != null)
                     {
@@ -684,7 +690,7 @@ namespace NodeEditor
 
                 foreach (var connection in MainGraph.Connections)
                 {
-                    if (connection.OutputNode != init || connection.OutputSocket.Value is Bang)
+                    if (connection.OutputNode != init || (connection.OutputSocket.Value is Bang && connection.InputSocket.Type != typeof(Bang)))
                     {
                         continue;
                     }
@@ -698,7 +704,15 @@ namespace NodeEditor
                     {
                         if (connection.InputNode.Type == NodeVisual.NodeType.Subsystem)
                         {
-                            nodeQueue.Push(connection.InputNode.SubsystemGraph.Nodes.Single(x => x.Name == connection.InputSocketName));
+                            NodeVisual inlet = connection.InputNode.SubsystemGraph.Nodes.Single(x => x.Name == connection.InputSocketName);
+                            inlet.GetSockets().Outputs.Single().Value = connection.InputSocket.Value;
+                            nodeQueue.Push(inlet);
+                        }
+                        else if (connection.InputNode.Type == NodeVisual.NodeType.Outlet)
+                        {
+                            SocketVisual subsystemOutput = connection.InputNode.OwnerGraph.OwnerNode.GetSockets().Outputs.Single(x => x.Name == connection.InputNode.Name);
+                            subsystemOutput.Value = connection.InputSocket.Value;
+                            nodeQueue.Push(connection.InputNode.OwnerGraph.OwnerNode);
                         }
                         else
                         {

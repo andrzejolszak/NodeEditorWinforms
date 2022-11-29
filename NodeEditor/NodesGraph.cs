@@ -30,6 +30,7 @@ namespace NodeEditor
 {
     public class NodesGraph
     {
+        public NodeVisual OwnerNode { get; set; }
         private const int HoverThrottlingMs = 10;
         public List<NodeVisual> Nodes = new List<NodeVisual>();
         internal List<NodeConnection> Connections = new List<NodeConnection>();
@@ -224,6 +225,7 @@ namespace NodeEditor
                         if (nv.Item1 != null)
                         {
                             graph.Nodes.Add(nv.Item1);
+                            nv.Item1.OwnerGraph = graph;
                             nodesWithSubsystems.Add(nv);
                         }
                     }
@@ -253,6 +255,7 @@ namespace NodeEditor
                 if (nodesWithSubsystem.Item2 != null && nodesWithSubsystem.Item2 != "")
                 {
                     nodesWithSubsystem.Item1.SubsystemGraph = graphs.Single(x => x.GUID == nodesWithSubsystem.Item2);
+                    nodesWithSubsystem.Item1.SubsystemGraph.OwnerNode = nodesWithSubsystem.Item1;
                 }
             }
 

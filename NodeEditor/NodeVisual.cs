@@ -68,6 +68,8 @@ namespace NodeEditor
 
         public NodesGraph SubsystemGraph { get; set; }
 
+        public NodesGraph OwnerGraph { get; set; }
+
         /// <summary>
         /// Tag for various puposes - may be used freely.
         /// </summary>
@@ -129,25 +131,23 @@ namespace NodeEditor
 
             if (MethodInf is null)
             {
-                if (this.Type == NodeType.Inlet || this.Type == NodeType.Outlet)
+                if (this.Type == NodeType.Inlet)
                 {
-                    {
-                        SocketVisual inSocket = new SocketVisual(this, new Microsoft.Msagl.Core.Geometry.Point(0, -this.Height / 2));
-                        inSocket.Type = typeof(object);
-                        inSocket.Name = "in-passthrough";
-                        inSocket.Input = true;
-                        inSocket.HotInput = true;
-                        inputSocketList.Add(inSocket);
-                        allSocketsList.Add(inSocket);
-                    }
-
-                    {
-                        SocketVisual outSocket = new SocketVisual(this, new Microsoft.Msagl.Core.Geometry.Point(0, this.Height / 2 - SocketVisual.SocketHeight));
-                        outSocket.Type = typeof(object);
-                        outSocket.Name = "out-passthrough";
-                        outputSocketList.Add(outSocket);
-                        allSocketsList.Add(outSocket);
-                    }
+                    SocketVisual outSocket = new SocketVisual(this, new Microsoft.Msagl.Core.Geometry.Point(0, this.Height / 2 - SocketVisual.SocketHeight));
+                    outSocket.Type = typeof(object);
+                    outSocket.Name = "out-passthrough";
+                    outputSocketList.Add(outSocket);
+                    allSocketsList.Add(outSocket);
+                }
+                else if (this.Type == NodeType.Outlet)
+                {
+                    SocketVisual inSocket = new SocketVisual(this, new Microsoft.Msagl.Core.Geometry.Point(0, -this.Height / 2));
+                    inSocket.Type = typeof(object);
+                    inSocket.Name = "in-passthrough";
+                    inSocket.Input = true;
+                    inSocket.HotInput = true;
+                    inputSocketList.Add(inSocket);
+                    allSocketsList.Add(inSocket);
                 }
                 else if (this.Type == NodeType.Subsystem)
                 {
@@ -162,11 +162,9 @@ namespace NodeEditor
                     {
                         if (sn.Type == NodeType.Inlet)
                         {
-                            (List<SocketVisual> Inputs, List<SocketVisual> Outputs, List<SocketVisual> All) = sn.GetSockets();
-                            SocketVisual inPassthrough = Inputs.Single();
                             SocketVisual newInPassthrough = new SocketVisual(this, new Microsoft.Msagl.Core.Geometry.Point(inputSocketList.Count/inlParamsCount * this.Width - this.Width/2, -this.Height / 2));
-                            newInPassthrough.Type = inPassthrough.Type;
-                            newInPassthrough.Name = inPassthrough.ParentNode.Name;
+                            newInPassthrough.Type = typeof(object);
+                            newInPassthrough.Name = sn.Name;
                             newInPassthrough.Input = true;
                             newInPassthrough.HotInput = true;
                             inputSocketList.Add(newInPassthrough);
@@ -174,11 +172,9 @@ namespace NodeEditor
                         }
                         else if (sn.Type == NodeType.Outlet)
                         {
-                            (List<SocketVisual> Inputs, List<SocketVisual> Outputs, List<SocketVisual> All) = sn.GetSockets();
-                            SocketVisual outPassthrough = Outputs.Single();
                             SocketVisual newOutPassthrough = new SocketVisual(this, new Microsoft.Msagl.Core.Geometry.Point(outputSocketList.Count/outlParamsCount * this.Width, this.Height / 2 - SocketVisual.SocketHeight));
-                            newOutPassthrough.Type = outPassthrough.Type;
-                            newOutPassthrough.Name = outPassthrough.ParentNode.Name;
+                            newOutPassthrough.Type = typeof(object);
+                            newOutPassthrough.Name = sn.Name;
                             outputSocketList.Add(newOutPassthrough);
                             allSocketsList.Add(newOutPassthrough);
                         }
@@ -304,7 +300,7 @@ namespace NodeEditor
 
             g.FillRectangle(new SolidBrush(fillColor), rect);
 
-            if (this.CustomEditor != null)
+            if (this.CustomEditor != null && this.CustomEditor.BackColor == SystemColors.Control)
             {
                 this.CustomEditor.BackColor = fillColor;
             }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Windows.Forms;
@@ -63,6 +64,31 @@ namespace MathSample
         public void Bang(out Bang bang)
         {
             bang = NodeEditor.Bang.Instance;
+        }
+
+        [Node("Flipper", "Helper", "Basic", "Starts execution", customEditor: typeof(Label))]
+        public void Flipper(Bang bangIn, out Bang bangOut)
+        {
+            bangOut = bangIn;
+            this.CurrentProcessingNode.UserData = this.CurrentProcessingNode.UserData == "true" ? "false" : "true";
+            this.CurrentProcessingNode.CustomEditor.Text = " ";
+            this.CurrentProcessingNode.CustomEditor.BackColor = this.CurrentProcessingNode.UserData == "true" ? Color.Green : Color.Red;
+        }
+
+        [Node("Counter", "Helper", "Basic", "Starts execution", true)]
+        public void Counter(Bang bangIn, out Bang bangOut)
+        {
+            // TODO: paremeterized nodes - params as inputs?
+            if (this.CurrentProcessingNode.UserData?.ToString() == "**")
+            {
+                this.CurrentProcessingNode.UserData = "";
+                bangOut = bangIn;
+            }
+            else
+            {
+                this.CurrentProcessingNode.UserData = (this.CurrentProcessingNode.UserData?.ToString() ?? "") + "*";
+                bangOut = null;
+            }
         }
 
         [Node("LoadBang", "Helper", "Basic", "Starts execution", false, invokeOnLoad: true)]
