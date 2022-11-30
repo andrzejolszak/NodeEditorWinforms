@@ -105,6 +105,8 @@ namespace NodeEditor
             timer.Start();        
             KeyDown += OnKeyDown;
             SetStyle(ControlStyles.Selectable, true);
+
+            this.Cursor = this.IsRunMode ? Cursors.Default : Cursors.Hand;
         }
 
         private void ContextOnFeedbackInfo(string message, NodeVisual nodeVisual, FeedbackType type, object tag, bool breakExecution)
@@ -441,7 +443,6 @@ namespace NodeEditor
                 .Concat(new[] { NodeVisual.NewSubsystemNodeNamePrefix, NodeVisual.NewSubsystemInletNodeNamePrefix, NodeVisual.NewSubsystemOutletNodeNamePrefix })
                 .ToArray();
             autocompleteMenu.SetAutocompleteMenu(tb, autocompleteMenu);
-            autocompleteMenu.Selected += (_, eee) => SwapNode();
 
             MainGraph.Nodes.Add(newAutocompleteNode);
             Refresh();
@@ -492,8 +493,9 @@ namespace NodeEditor
                 }
                 else
                 {
+                    string name = tb.Text.Trim();
                     var methods = Context.GetType().GetMethods();
-                    MethodInfo info = methods.SingleOrDefault(x => x.Name.Equals(tb.Text, StringComparison.InvariantCultureIgnoreCase));
+                    MethodInfo info = methods.SingleOrDefault(x => x.Name.Equals(name.Split(' ')[0], StringComparison.InvariantCultureIgnoreCase));
                     if (info is null)
                     {
                         return;
@@ -507,7 +509,7 @@ namespace NodeEditor
                         return;
                     }
 
-                    replacementNode = new NodeVisual(attrib.Name, newAutocompleteNode.X, newAutocompleteNode.Y);
+                    replacementNode = new NodeVisual(name, newAutocompleteNode.X, newAutocompleteNode.Y);
                     replacementNode.MethodInf = info;
                     replacementNode.IsInteractive = attrib.IsInteractive;
                     replacementNode.Order = MainGraph.Nodes.Count;
@@ -647,7 +649,7 @@ namespace NodeEditor
         public void ToggleRunMode()
         {
             this.IsRunMode = !this.IsRunMode;
-            this.Cursor = this.IsRunMode ? Cursors.Hand : Cursors.Default;
+            this.Cursor = this.IsRunMode ? Cursors.Default : Cursors.Hand;
 
             Stack<NodeVisual> nodeQueue = new Stack<NodeVisual>();
             foreach(NodeVisual node in MainGraph.Nodes.Reverse<NodeVisual>())
@@ -721,12 +723,6 @@ namespace NodeEditor
                     }
                 }
             }
-        }
-
-        public List<NodeVisual> GetNodes(params string[] nodeNames)
-        {
-            var nodes = MainGraph.Nodes.Where(x => nodeNames.Contains(x.Name));
-            return nodes.ToList();
         }
 
         public bool HasImpact(NodeVisual startNode, NodeVisual endNode)

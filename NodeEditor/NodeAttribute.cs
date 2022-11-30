@@ -33,31 +33,11 @@ namespace NodeEditor
         /// Const used for width and height if they are not defined by user
         /// </summary>
         private const int Auto = -1;
-
-        /// <summary>
-        /// Where should be node menuitem located - don't set if it should be in the main menu level.
-        /// </summary>
-        public string Menu { get; set; }
-
-        /// <summary>
-        /// Optional category for the node.
-        /// </summary>        
-        public string Category { get; set; }
         
         /// <summary>
         /// If true, the node is able to be executed during execution process (will have exec input and output socket).
         /// </summary>
         public bool IsInteractive { get; set; }
-
-        /// <summary>
-        /// Name of the node that will be displayed in the node caption.
-        /// </summary>
-        public string Name { get; set; }
-
-        /// <summary>
-        /// Description that should tell more precisely what the node is performing.
-        /// </summary>
-        public string Description { get; set; }
 
         /// <summary>
         /// Given type should be subclass of System.Windows.Forms.Control, and represents what will be displayed in the middle of the node.
@@ -89,27 +69,14 @@ namespace NodeEditor
         /// <param name="xmlExportName">Name that will be used in the xml export of the graph.</param>
         /// <param name="width">Width of single node, or Auto if not determined</param>
         /// <param name="height">Height of single node, or Auto if not determined</param>
-        public NodeAttribute(string name = "Node", string menu = "", string category = "General",
-            string description = "Some node.", bool isInteractive = false, Type customEditor = null,
+        public NodeAttribute(bool isInteractive = false, Type customEditor = null,
             int width = Auto, int height = Auto, bool invokeOnLoad = false)
         {
-            Name = name;
-            Menu = menu;
-            Category = category;
-            Description = description;
             IsInteractive = isInteractive;
             CustomEditor = customEditor;
             Width = width;
             Height = height;
             InvokeOnLoad = invokeOnLoad;
-        }
-
-        /// <summary>
-        /// Full path in the context menu.
-        /// </summary>
-        public string Path
-        {
-            get { return Menu + "/" + Name; }
         }
     }
 }

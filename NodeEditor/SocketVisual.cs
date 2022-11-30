@@ -43,6 +43,10 @@ namespace NodeEditor
 
         public object Value { get; set; }
 
+        public object CurryDefault { get; set; }
+
+        public object CurriedValue => Value ?? CurryDefault;
+
         public NodeVisual ParentNode { get; }
 
         public void Draw(Graphics g, Point mouseLocation, MouseButtons mouseButtons)
@@ -65,21 +69,26 @@ namespace NodeEditor
                     var sf = new StringFormat();
                     sf.Alignment = StringAlignment.Near;
                     sf.LineAlignment = StringAlignment.Center;
-                    g.DrawString(Name + ":" + Value, SystemFonts.SmallCaptionFont, fontBrush, new RectangleF(x, y - SocketHeight * 2, 1000, Height * 2), sf);
+                    g.DrawString(Name + ":" + CurriedValue, SystemFonts.SmallCaptionFont, fontBrush, new RectangleF(x, y - SocketHeight * 2, 1000, Height * 2), sf);
                 }
                 else
                 {
                     var sf = new StringFormat();
                     sf.Alignment = StringAlignment.Near;
                     sf.LineAlignment = StringAlignment.Center;
-                    g.DrawString(Name + ":" + Value, SystemFonts.SmallCaptionFont, fontBrush, new RectangleF(x, y + SocketHeight, 1000, Height * 2), sf);
+                    g.DrawString(Name + ":" + CurriedValue, SystemFonts.SmallCaptionFont, fontBrush, new RectangleF(x, y + SocketHeight, 1000, Height * 2), sf);
                 }
             }
 
             g.InterpolationMode = InterpolationMode.HighQualityBilinear;
             g.SmoothingMode = SmoothingMode.HighQuality;
 
-            g.FillRectangle(this.Value == null ? Brushes.DarkGray : Brushes.Black, socketRect);
+            g.FillRectangle(this.CurriedValue == null ? Brushes.DarkGray : Brushes.Black, socketRect);
+            if (CurryDefault != null && Value == null)
+            {
+                g.FillRectangle(Brushes.PaleGoldenrod, socketRect);
+            }
+
             g.DrawString(Type.Name.Substring(0, 1).ToLowerInvariant(), SystemFonts.SmallCaptionFont, Brushes.White, new RectangleF(x + 2, y - 6, Width * 2, Height * 2));
         }
 

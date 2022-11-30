@@ -190,16 +190,19 @@ namespace NodeEditor
 
             var NodeWidth = GetNodeBounds().Width;
 
+            string[] curry = this.Name.Split(' ').Skip(1).ToArray();
+
             ParameterInfo[] parms = MethodInf.GetParameters().OrderBy(x => x.Position).ToArray();
             int outParamsCount = parms.Count(x => x.IsOut);
             int inParamsCount = parms.Count(x => !x.IsOut);
+
             for (int i = 0; i < parms.Length; i++)
             {
                 ParameterInfo pp = parms[i];
                 SocketVisual socket = null;
                 if (pp.IsOut)
                 {
-                    socket = new SocketVisual(this, new Microsoft.Msagl.Core.Geometry.Point(i * (NodeWidth - SocketVisual.SocketWidth) / outParamsCount - NodeWidth / 2, this.Height / 2 - SocketVisual.SocketHeight));
+                    socket = new SocketVisual(this, new Microsoft.Msagl.Core.Geometry.Point(outputSocketList.Count * (NodeWidth - SocketVisual.SocketWidth) / outParamsCount - NodeWidth / 2, this.Height / 2 - SocketVisual.SocketHeight));
                     socket.Type = pp.ParameterType;
                     socket.Name = pp.Name;
 
@@ -207,11 +210,26 @@ namespace NodeEditor
                 }
                 else
                 {
-                    socket = new SocketVisual(this, new Microsoft.Msagl.Core.Geometry.Point(i * ( NodeWidth - SocketVisual.SocketWidth) / inParamsCount - NodeWidth / 2, -this.Height / 2));
+                    bool addCurry = false;
+                    if (curry.Length > 0 && curry.Length == inParamsCount)
+                    {
+                        addCurry = true;
+                    }
+                    else if (curry.Length > 0)
+                    {
+                        this.Feedback = FeedbackType.Error;
+                    }
+
+                    socket = new SocketVisual(this, new Microsoft.Msagl.Core.Geometry.Point(inputSocketList.Count * (NodeWidth - SocketVisual.SocketWidth) / inParamsCount - NodeWidth / 2, -this.Height / 2));
                     socket.Type = pp.ParameterType;
                     socket.Name = pp.Name;
                     socket.Input = true;
-                    socket.HotInput = i == 0;
+                    socket.HotInput = inputSocketList.Count == 0;
+
+                    if (addCurry && curry[inputSocketList.Count] != "*")
+                    {
+                        socket.CurryDefault = Convert.ChangeType(curry[inputSocketList.Count], pp.ParameterType);
+                    }
 
                     inputSocketList.Add(socket);
                 }
@@ -300,7 +318,7 @@ namespace NodeEditor
 
             g.FillRectangle(new SolidBrush(fillColor), rect);
 
-            if (this.CustomEditor != null && this.CustomEditor.BackColor == SystemColors.Control)
+            if (this.CustomEditor != null && (this.CustomEditor.BackColor == SystemColors.Control || this.CustomEditor.BackColor == SystemColors.Window))
             {
                 this.CustomEditor.BackColor = fillColor;
             }
@@ -333,18 +351,16 @@ namespace NodeEditor
             }
 
             _ = this.GetSockets();
-            object[] parameters = this._allSocketsOrdered.Select(x => x.Input ? x.Value : null).ToArray();
+            object[] parameters = this._allSocketsOrdered.Select(x => x.Input ? x.CurriedValue : null).ToArray();
 
             MethodInf.Invoke(context, parameters);
             for (int i = 0; i < this._allSocketsOrdered.Count; i++)
             {
                 SocketVisual sock = this._allSocketsOrdered[i];
-                if (sock.Input)
+                if (!sock.Input)
                 {
-                    continue;
+                    sock.Value = parameters[i];
                 }
-
-                sock.Value = parameters[i];
             }
         }
 
