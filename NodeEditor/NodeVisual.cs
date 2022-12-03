@@ -133,7 +133,7 @@ namespace NodeEditor
             {
                 if (this.Type == NodeType.Inlet)
                 {
-                    SocketVisual outSocket = new SocketVisual(this, new Microsoft.Msagl.Core.Geometry.Point(0, this.Height / 2 - SocketVisual.SocketHeight));
+                    SocketVisual outSocket = new SocketVisual(this);
                     outSocket.Type = typeof(object);
                     outSocket.Name = "out-passthrough";
                     outputSocketList.Add(outSocket);
@@ -141,7 +141,7 @@ namespace NodeEditor
                 }
                 else if (this.Type == NodeType.Outlet)
                 {
-                    SocketVisual inSocket = new SocketVisual(this, new Microsoft.Msagl.Core.Geometry.Point(0, -this.Height / 2));
+                    SocketVisual inSocket = new SocketVisual(this);
                     inSocket.Type = typeof(object);
                     inSocket.Name = "in-passthrough";
                     inSocket.Input = true;
@@ -162,7 +162,7 @@ namespace NodeEditor
                     {
                         if (sn.Type == NodeType.Inlet)
                         {
-                            SocketVisual newInPassthrough = new SocketVisual(this, new Microsoft.Msagl.Core.Geometry.Point(inputSocketList.Count/inlParamsCount * this.Width - this.Width/2, -this.Height / 2));
+                            SocketVisual newInPassthrough = new SocketVisual(this);
                             newInPassthrough.Type = typeof(object);
                             newInPassthrough.Name = sn.Name;
                             newInPassthrough.Input = true;
@@ -172,7 +172,7 @@ namespace NodeEditor
                         }
                         else if (sn.Type == NodeType.Outlet)
                         {
-                            SocketVisual newOutPassthrough = new SocketVisual(this, new Microsoft.Msagl.Core.Geometry.Point(outputSocketList.Count/outlParamsCount * this.Width, this.Height / 2 - SocketVisual.SocketHeight));
+                            SocketVisual newOutPassthrough = new SocketVisual(this);
                             newOutPassthrough.Type = typeof(object);
                             newOutPassthrough.Name = sn.Name;
                             outputSocketList.Add(newOutPassthrough);
@@ -180,6 +180,8 @@ namespace NodeEditor
                         }
                     }
                 }
+
+                LayoutSockets();
 
                 _outputSocketsCache = outputSocketList;
                 _inputSocketsCache = inputSocketList;
@@ -202,7 +204,7 @@ namespace NodeEditor
                 SocketVisual socket = null;
                 if (pp.IsOut)
                 {
-                    socket = new SocketVisual(this, new Microsoft.Msagl.Core.Geometry.Point(outputSocketList.Count * (NodeWidth - SocketVisual.SocketWidth) / outParamsCount - NodeWidth / 2, this.Height / 2 - SocketVisual.SocketHeight));
+                    socket = new SocketVisual(this);
                     socket.Type = pp.ParameterType;
                     socket.Name = pp.Name;
 
@@ -220,7 +222,7 @@ namespace NodeEditor
                         this.Feedback = FeedbackType.Error;
                     }
 
-                    socket = new SocketVisual(this, new Microsoft.Msagl.Core.Geometry.Point(inputSocketList.Count * (NodeWidth - SocketVisual.SocketWidth) / inParamsCount - NodeWidth / 2, -this.Height / 2));
+                    socket = new SocketVisual(this);
                     socket.Type = pp.ParameterType;
                     socket.Name = pp.Name;
                     socket.Input = true;
@@ -237,11 +239,30 @@ namespace NodeEditor
                 allSocketsList.Add(socket);
             }
 
+            LayoutSockets();
+
             _outputSocketsCache = outputSocketList;
             _inputSocketsCache = inputSocketList;
             _allSocketsOrdered = allSocketsList;
 
             return (_inputSocketsCache, _outputSocketsCache, _allSocketsOrdered);
+        
+            void LayoutSockets()
+            {
+                for (int i = 0; i < inputSocketList.Count; i++)
+                {
+                    SocketVisual s = inputSocketList[i];
+                    double xOffset = inputSocketList.Count == 1 ? -s.Width / 2 : i * (this.Width - s.Width) / (inputSocketList.Count - 1) - this.Width / 2;
+                    s.SetLocationOffset(xOffset, -this.Height / 2);
+                }
+
+                for (int i = 0; i < outputSocketList.Count; i++)
+                {
+                    SocketVisual s = outputSocketList[i];
+                    double xOffset = outputSocketList.Count == 1 ? -s.Width / 2 : i * (this.Width - s.Width) / (outputSocketList.Count - 1) - this.Width / 2;
+                    s.SetLocationOffset(xOffset, this.Height / 2 - s.Height);
+                }
+            }
         }
 
         /// <summary>
@@ -257,7 +278,7 @@ namespace NodeEditor
             var csize = new SizeF();
             if (CustomEditor != null && CustomEditor.ClientSize != default && this.Name != NewSpecialNodeName)
             {
-                csize = new SizeF(CustomEditor.ClientSize.Width, CustomEditor.ClientSize.Height + HeaderHeight + 8);                
+                csize = new SizeF(CustomEditor.ClientSize.Width, CustomEditor.ClientSize.Height + HeaderHeight + 8 + SocketVisual.SocketHeight);                
             }
 
             var h = HeaderHeight;
@@ -296,11 +317,11 @@ namespace NodeEditor
 
             if (Feedback == FeedbackType.Warning)
             {
-                g.DrawRectangle(new Pen(System.Drawing.Color.Yellow, 4), Rectangle.Round(feedrect));
+                g.DrawRectangle(new Pen(Color.Yellow, 3), Rectangle.Round(feedrect));
             }
             else if (Feedback == FeedbackType.Error)
             {
-                g.DrawRectangle(new Pen(System.Drawing.Color.Red, 5), Rectangle.Round(feedrect));
+                g.DrawRectangle(new Pen(Color.Red, 3), Rectangle.Round(feedrect));
             }
 
             Color fillColor = NodeColor;
@@ -318,7 +339,12 @@ namespace NodeEditor
 
             g.FillRectangle(new SolidBrush(fillColor), rect);
 
-            if (this.CustomEditor != null && (this.CustomEditor.BackColor == SystemColors.Control || this.CustomEditor.BackColor == SystemColors.Window))
+            if (this.CustomEditor != null && (
+                this.CustomEditor.BackColor == NodeColor 
+                || this.CustomEditor.BackColor == Color.White 
+                || this.CustomEditor.BackColor == Color.PaleGoldenrod 
+                || this.CustomEditor.BackColor == SystemColors.Control 
+                || this.CustomEditor.BackColor == SystemColors.Window))
             {
                 this.CustomEditor.BackColor = fillColor;
             }

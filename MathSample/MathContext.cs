@@ -57,7 +57,6 @@ namespace MathSample
         public void ShowMessageBox(object bang, object x)
         {
             this.CurrentProcessingNode.CustomEditor.Text = x?.ToString() ?? "NULL";
-           // MessageBox.Show(x.ToString(), "Show Value", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         [Node(true)]
@@ -69,24 +68,34 @@ namespace MathSample
         [Node(customEditor: typeof(Label))]
         public void Flipper(Bang bangIn, out Bang bangOut)
         {
+            if (this.CurrentProcessingNode.UserData is null)
+            {
+                this.CurrentProcessingNode.UserData = false;
+            }
+
             bangOut = bangIn;
-            this.CurrentProcessingNode.UserData = this.CurrentProcessingNode.UserData == "true" ? "false" : "true";
+            this.CurrentProcessingNode.UserData = (bool)this.CurrentProcessingNode.UserData ? false : true;
             this.CurrentProcessingNode.CustomEditor.Text = " ";
-            this.CurrentProcessingNode.CustomEditor.BackColor = this.CurrentProcessingNode.UserData == "true" ? Color.Green : Color.Red;
+            this.CurrentProcessingNode.CustomEditor.BackColor = (bool)this.CurrentProcessingNode.UserData ? Color.Green : Color.Red;
         }
 
         [Node(true)]
         public void Counter(Bang bangIn, out Bang bangOut)
         {
-            // TODO: paremeterized nodes - params as inputs?
-            if (this.CurrentProcessingNode.UserData?.ToString() == "**")
+            if (this.CurrentProcessingNode.UserData is null)
             {
-                this.CurrentProcessingNode.UserData = "";
+                this.CurrentProcessingNode.UserData = 0;
+            }
+
+            this.CurrentProcessingNode.UserData = (int)this.CurrentProcessingNode.UserData + 1;
+
+            if ((int)this.CurrentProcessingNode.UserData == 2)
+            {
+                this.CurrentProcessingNode.UserData = 0;
                 bangOut = bangIn;
             }
             else
             {
-                this.CurrentProcessingNode.UserData = (this.CurrentProcessingNode.UserData?.ToString() ?? "") + "*";
                 bangOut = null;
             }
         }
@@ -94,17 +103,51 @@ namespace MathSample
         [Node(true)]
         public void CounterC(Bang bangIn, int count, out Bang bangOut)
         {
-            // TODO: paremeterized nodes - params as inputs?
-            if (this.CurrentProcessingNode.UserData?.ToString().Length == count)
+            if (this.CurrentProcessingNode.UserData is null)
             {
-                this.CurrentProcessingNode.UserData = "";
+                this.CurrentProcessingNode.UserData = 0;
+            }
+
+            this.CurrentProcessingNode.UserData = (int)this.CurrentProcessingNode.UserData + 1;
+
+            if ((int)this.CurrentProcessingNode.UserData == count)
+            {
+                this.CurrentProcessingNode.UserData = 0;
                 bangOut = bangIn;
             }
             else
             {
-                this.CurrentProcessingNode.UserData = (this.CurrentProcessingNode.UserData?.ToString() ?? "") + "*";
                 bangOut = null;
             }
+        }
+
+        [Node]
+        public void Compare(int a, string @operator, int b, out bool result)
+        {
+            result = false;
+            switch (@operator)
+            {
+                case "<": result = a < b; break;
+                case "<=": result = a <= b; break;
+                case ">": result = a > b; break;
+                case ">=": result = a >= b; break;
+                case "==": result = a == b; break;
+                case "!=": result = a != b; break;
+
+                default: this.FeedbackInfo?.Invoke("Unknown operator", this.CurrentProcessingNode, FeedbackType.Error, null, false); break;
+            };
+        }
+
+        [Node]
+        public void AggrAnd(bool input, Bang resetBang, out bool res)
+        {
+            if (resetBang != null || this.CurrentProcessingNode.UserData is null)
+            {
+                this.CurrentProcessingNode.UserData = true;
+            }
+
+            this.CurrentProcessingNode.UserData = (bool)this.CurrentProcessingNode.UserData && input;
+            res = (bool)this.CurrentProcessingNode.UserData;
         }
 
         [Node(false, invokeOnLoad: true)]

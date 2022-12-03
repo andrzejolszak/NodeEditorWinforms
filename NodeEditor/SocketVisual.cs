@@ -29,9 +29,8 @@ namespace NodeEditor
 
         public const float SocketWidth = 16;
 
-        public SocketVisual(NodeVisual nodeVisual, Microsoft.Msagl.Core.Geometry.Point locationOffset) : base(() => null, () => nodeVisual.Center, locationOffset)
+        public SocketVisual(NodeVisual nodeVisual) : base(() => null, () => nodeVisual.Center)
         {
-            this.ParentNode = nodeVisual;
         }
 
         public float Width { get; set; } = SocketWidth;
@@ -47,12 +46,19 @@ namespace NodeEditor
 
         public object CurriedValue => Value ?? CurryDefault;
 
-        public NodeVisual ParentNode { get; }
+        public override Microsoft.Msagl.Core.Geometry.Point LocationOffset => this._locationOffset;
+
+        private Microsoft.Msagl.Core.Geometry.Point _locationOffset;
+
+        public void SetLocationOffset(double x, double y)
+        {
+            this._locationOffset = new Microsoft.Msagl.Core.Geometry.Point(x, y);
+        }
 
         public void Draw(Graphics g, Point mouseLocation, MouseButtons mouseButtons)
         {
-            float x = (float)(this.ParentNode.Center.X + this.LocationOffset.X);
-            float y = (float)(this.ParentNode.Center.Y + this.LocationOffset.Y);
+            float x = (float)this.Location.X;
+            float y = (float)this.Location.Y;
 
             var socketRect = new RectangleF(x, y, Width, Height);
             var hover = socketRect.Contains(mouseLocation);
@@ -94,7 +100,7 @@ namespace NodeEditor
 
         public RectangleF GetBounds()
         {
-            return new RectangleF((float)(this.ParentNode.Center.X + this.LocationOffset.X), (float)(this.ParentNode.Center.Y + this.LocationOffset.Y), Width, Height);
+            return new RectangleF((float)this.Location.X, (float)this.Location.Y, Width, Height);
         }
     }
 }

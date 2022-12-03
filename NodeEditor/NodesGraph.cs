@@ -389,7 +389,6 @@ namespace NodeEditor
                 if (ctrl != null)
                 {
                     ctrl.BackColor = loadedNode.NodeColor;
-                    ctrl.Tag = (loadedNode, context);
                 }
 
                 loadedNode.LayoutEditor();

@@ -207,7 +207,7 @@ namespace NodeEditor
                 
                 if (dragSocket != null)
                 {
-                    var center = new PointF((float)dragSocket.ParentNode.Center.X + (float)dragSocket.LocationOffset.X + dragSocket.Width/2f, (float)dragSocket.ParentNode.Center.Y + (float)dragSocket.LocationOffset.Y + dragSocket.Height/2f);
+                    var center = new PointF((float)dragSocket.Location.X + dragSocket.Width/2, (float)dragSocket.Location.Y + dragSocket.Height/2);
                     if (dragSocket.Input)
                     {
                         dragConnectionBegin.X += em.X - lastmpos.X;
@@ -434,7 +434,6 @@ namespace NodeEditor
             };
 
             newAutocompleteNode.CustomEditor = tb;
-            newAutocompleteNode.CustomEditor.Tag = (newAutocompleteNode, this.context);
             Controls.Add(newAutocompleteNode.CustomEditor);
             newAutocompleteNode.LayoutEditor();
 
@@ -525,7 +524,6 @@ namespace NodeEditor
                         if (ctrl != null)
                         {
                             ctrl.BackColor = newAutocompleteNode.NodeColor;
-                            ctrl.Tag = (replacementNode, this.context);
                             Controls.Add(ctrl);
                         }
 
