@@ -25,6 +25,8 @@ using System.Linq;
 using System.Reflection;
 using System.Windows.Forms;
 using System.Xml.Linq;
+using AnimateForms.Core;
+using Microsoft.Msagl.Core.Layout;
 
 namespace NodeEditor
 {
@@ -34,6 +36,7 @@ namespace NodeEditor
     public partial class NodesControl : UserControl
     {
         public NodesGraph MainGraph { get; set; } = new NodesGraph();
+        public readonly Animate Animate = new Animate();
         private bool needRepaint = true;
         private Timer timer = new Timer();
         private bool mdown;
@@ -103,7 +106,9 @@ namespace NodeEditor
             timer.Interval = 30;
             timer.Tick += TimerOnTick;
             timer.Start();        
+
             KeyDown += OnKeyDown;
+            
             SetStyle(ControlStyles.Selectable, true);
 
             this.Cursor = this.IsRunMode ? Cursors.Default : Cursors.Hand;
@@ -132,14 +137,15 @@ namespace NodeEditor
         {
             if (keyEventArgs.KeyCode == Keys.Delete)
             {
-                DeleteSelectedNodes();
+                DeleteSelectedNodes(null);
             }
         }
 
         private void TimerOnTick(object sender, EventArgs eventArgs)
         {
             if (DesignMode) return;
-            if (needRepaint)
+
+            if (needRepaint || this.Animate.AnimationUpdated)
             {
                 Invalidate();
             }
@@ -150,7 +156,7 @@ namespace NodeEditor
             e.Graphics.SmoothingMode = SmoothingMode.HighQuality;
             e.Graphics.InterpolationMode = InterpolationMode.HighQualityBilinear;            
 
-            MainGraph.Draw(e.Graphics, PointToClient(MousePosition), MouseButtons);            
+            MainGraph.Draw(e.Graphics, PointToClient(MousePosition), MouseButtons, this.IsRunMode);            
 
             if (dragSocket != null)
             {
@@ -303,14 +309,13 @@ namespace NodeEditor
 
                 if (node != null && !mdown && dragSocket == null)
                 {
-
                     node.IsSelected = true;
 
-                    node.Order = MainGraph.Nodes.Min(x => x.Order) - 1;
                     if (node.CustomEditor != null)
                     {
                         node.CustomEditor.BringToFront();
                     }
+
                     mdown = true;
                     lastmpos = PointToScreen(e.Location);
 
@@ -548,50 +553,61 @@ namespace NodeEditor
 
             if (e.Button == MouseButtons.Right)
             {
-                var context = new ContextMenuStrip();
-                if (MainGraph.Nodes.Exists(x=>x.IsSelected))
+                var node = MainGraph.Nodes.OrderBy(x => x.Order).FirstOrDefault(
+                        x => new RectangleF(new PointF(x.X, x.Y), x.GetNodeBounds()).Contains(e.Location));
+                
+                if (node is null && !MainGraph.Nodes.Exists(x => x.IsSelected))
                 {
-                    context.Items.Add("Delete Node(s)", null, ((o, args) =>
-                    {
-                        DeleteSelectedNodes();
-                    }));
-                    context.Items.Add("Duplicate Node(s)", null, ((o, args) =>
-                    {
-                        DuplicateSelectedNodes();
-                    }));
-                    context.Items.Add("Change Color ...", null, ((o, args) =>
-                    {
-                        ChangeSelectedNodesColor();
-                    }));
-                    if(MainGraph.Nodes.Count(x=>x.IsSelected)==2)
-                    {
-                        var sel = MainGraph.Nodes.Where(x => x.IsSelected).ToArray();
-                        context.Items.Add("Check Impact", null, ((o,args)=>
-                        {
-                            if(HasImpact(sel[0],sel[1]) || HasImpact(sel[1],sel[0]))
-                            {
-                                MessageBox.Show("One node has impact on other.", "Impact detected.", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                            }
-                            else
-                            {
-                                MessageBox.Show("These nodes not impacts themselves.", "No impact.", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                            }
-                        }));                       
-                    }
-                    context.Items.Add(new ToolStripSeparator());
+                    return;
                 }
+
+                var context = new ContextMenuStrip();
+
+                context.Items.Add("Delete Node(s)", null, ((o, args) =>
+                {
+                    DeleteSelectedNodes(node);
+                }));
+
+                context.Items.Add("Duplicate Node(s)", null, ((o, args) =>
+                {
+                    DuplicateSelectedNodes(node);
+                }));
+
+                context.Items.Add("Change Color ...", null, ((o, args) =>
+                {
+                    ChangeSelectedNodesColor(node);
+                }));
+
+                if (MainGraph.Nodes.Count(x => x.IsSelected) == 2)
+                {
+                    var sel = MainGraph.Nodes.Where(x => x.IsSelected).ToArray();
+                    context.Items.Add("Check Impact", null, ((o, args) =>
+                    {
+                        if (HasImpact(sel[0], sel[1]) || HasImpact(sel[1], sel[0]))
+                        {
+                            MessageBox.Show("One node has impact on other.", "Impact detected.", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        }
+                        else
+                        {
+                            MessageBox.Show("These nodes not impacts themselves.", "No impact.", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        }
+                    }));
+                }
+                context.Items.Add(new ToolStripSeparator());
 
                 context.Show(MousePosition);
             }
         }
 
-        private void ChangeSelectedNodesColor()
+        private void ChangeSelectedNodesColor(NodeVisual node)
         {
+            NodeVisual[] selected = MainGraph.Nodes.Where(x => x.IsSelected).Concat(new[] { node }).Where(x => x != null).ToArray();
+
             ColorDialog cd = new ColorDialog();
             cd.FullOpen = true;
             if (cd.ShowDialog() == DialogResult.OK)
             {
-                foreach (var n in MainGraph.Nodes.Where(x => x.IsSelected))
+                foreach (var n in selected)
                 {
                     n.NodeColor = cd.Color;
                 }
@@ -600,12 +616,14 @@ namespace NodeEditor
             needRepaint = true;
         }
 
-        private void DuplicateSelectedNodes()
+        private void DuplicateSelectedNodes(NodeVisual node)
         {
+            NodeVisual[] selected = MainGraph.Nodes.Where(x => x.IsSelected).Concat(new[] { node }).Where(x => x != null).ToArray();
+
             var cloned = new List<NodeVisual>();
-            foreach (var n in MainGraph.Nodes.Where(x => x.IsSelected))
+            foreach (var n in selected)
             {
-                int count = MainGraph.Nodes.Count(x => x.IsSelected);
+                int count = selected.Length;
                 var ms = new MemoryStream();
                 var bw = new BinaryWriter(ms);
 
@@ -629,18 +647,20 @@ namespace NodeEditor
             Invalidate();
         }
 
-        private void DeleteSelectedNodes()
+        private void DeleteSelectedNodes(NodeVisual node)
         {
-            if (MainGraph.Nodes.Exists(x => x.IsSelected))
+            NodeVisual[] selected = MainGraph.Nodes.Where(x => x.IsSelected).Concat(new[] { node }).Where(x => x != null).ToArray();
+            if (selected.Length > 0)
             {
-                foreach (var n in MainGraph.Nodes.Where(x => x.IsSelected))
+                foreach (var n in selected)
                 {
                     Controls.Remove(n.CustomEditor);
                     MainGraph.Connections.RemoveAll(
                         x => x.OutputNode == n || x.InputNode == n);
                 }
-                MainGraph.Nodes.RemoveAll(x => MainGraph.Nodes.Where(n => n.IsSelected).Contains(x));
+                MainGraph.Nodes.RemoveAll(x => selected.Contains(x));
             }
+
             Invalidate();
         }
 
@@ -648,6 +668,8 @@ namespace NodeEditor
         {
             this.IsRunMode = !this.IsRunMode;
             this.Cursor = this.IsRunMode ? Cursors.Default : Cursors.Hand;
+
+            this.needRepaint = true;
 
             Stack<NodeVisual> nodeQueue = new Stack<NodeVisual>();
             foreach(NodeVisual node in MainGraph.Nodes.Reverse<NodeVisual>())

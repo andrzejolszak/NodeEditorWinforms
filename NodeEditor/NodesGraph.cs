@@ -43,19 +43,17 @@ namespace NodeEditor
 
         public string GUID = Guid.NewGuid().ToString();
 
-        public void Draw(Graphics g, Point mouseLocation, MouseButtons mouseButtons)
+        public void Draw(Graphics g, Point mouseLocation, MouseButtons mouseButtons, bool isRunMode)
         {
             g.InterpolationMode = InterpolationMode.Low;
             g.SmoothingMode = SmoothingMode.HighSpeed;
 
             g.FillRectangle(new SolidBrush(Color.FromArgb(220, Color.White)), g.ClipBounds);
 
-            foreach (var node in Nodes)
+            var orderedNodes = Nodes.OrderByDescending(x => x.Order);
+            foreach (var node in orderedNodes)
             {
-                var rect = new RectangleF(new PointF((float)node.X, (float)node.Y), node.GetNodeBounds());
-                bool isHover = rect.Contains(mouseLocation);
-                int offset = isHover ? 6 : 4;
-                g.FillRectangle(Brushes.DarkGray, new RectangleF(new PointF(node.X+ offset, node.Y+ offset), node.GetNodeBounds()));
+                node.Draw(g, mouseLocation, mouseButtons, isRunMode);
             }
 
             if (KdTree != null && !_hoverRecalc)
@@ -116,12 +114,6 @@ namespace NodeEditor
 
                     _treeRecalc = false;
                 });
-            }
-
-            var orderedNodes = Nodes.OrderByDescending(x => x.Order);
-            foreach (var node in orderedNodes)
-            {
-                node.Draw(g, mouseLocation, mouseButtons);
             }
         }
 

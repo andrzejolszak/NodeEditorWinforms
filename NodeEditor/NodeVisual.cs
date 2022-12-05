@@ -24,6 +24,7 @@ using System.Linq;
 using System.Net.Sockets;
 using System.Reflection;
 using System.Windows.Forms;
+using System.Xml.Linq;
 
 namespace NodeEditor
 {
@@ -61,7 +62,7 @@ namespace NodeEditor
         public FeedbackType Feedback { get; set; }
         public Control CustomEditor { get; internal set; }
         public string GUID = Guid.NewGuid().ToString();
-        public Color NodeColor = System.Drawing.Color.GhostWhite;
+        public Color NodeColor = Color.FromArgb(0xFF, 0xF8, 0xF8, 0xFF);
         private List<SocketVisual> _inputSocketsCache;
         private List<SocketVisual> _outputSocketsCache;
         private List<SocketVisual> _allSocketsOrdered;
@@ -162,19 +163,23 @@ namespace NodeEditor
                     {
                         if (sn.Type == NodeType.Inlet)
                         {
-                            SocketVisual newInPassthrough = new SocketVisual(this);
-                            newInPassthrough.Type = typeof(object);
-                            newInPassthrough.Name = sn.Name;
-                            newInPassthrough.Input = true;
-                            newInPassthrough.HotInput = true;
+                            SocketVisual newInPassthrough = new SocketVisual(this)
+                            {
+                                Type = typeof(object),
+                                Name = sn.Name,
+                                Input = true,
+                                HotInput = true
+                            };
                             inputSocketList.Add(newInPassthrough);
                             allSocketsList.Add(newInPassthrough);
                         }
                         else if (sn.Type == NodeType.Outlet)
                         {
-                            SocketVisual newOutPassthrough = new SocketVisual(this);
-                            newOutPassthrough.Type = typeof(object);
-                            newOutPassthrough.Name = sn.Name;
+                            SocketVisual newOutPassthrough = new SocketVisual(this)
+                            {
+                                Type = typeof(object),
+                                Name = sn.Name
+                            };
                             outputSocketList.Add(newOutPassthrough);
                             allSocketsList.Add(newOutPassthrough);
                         }
@@ -204,9 +209,11 @@ namespace NodeEditor
                 SocketVisual socket = null;
                 if (pp.IsOut)
                 {
-                    socket = new SocketVisual(this);
-                    socket.Type = pp.ParameterType;
-                    socket.Name = pp.Name;
+                    socket = new SocketVisual(this)
+                    {
+                        Type = pp.ParameterType,
+                        Name = pp.Name
+                    };
 
                     outputSocketList.Add(socket);
                 }
@@ -222,11 +229,13 @@ namespace NodeEditor
                         this.Feedback = FeedbackType.Error;
                     }
 
-                    socket = new SocketVisual(this);
-                    socket.Type = pp.ParameterType;
-                    socket.Name = pp.Name;
-                    socket.Input = true;
-                    socket.HotInput = inputSocketList.Count == 0;
+                    socket = new SocketVisual(this)
+                    {
+                        Type = pp.ParameterType,
+                        Name = pp.Name,
+                        Input = true,
+                        HotInput = inputSocketList.Count == 0
+                    };
 
                     if (addCurry && curry[inputSocketList.Count] != "*")
                     {
@@ -308,10 +317,15 @@ namespace NodeEditor
         /// <param name="g">Graphics context.</param>
         /// <param name="mouseLocation">Location of the mouse relative to NodesControl instance.</param>
         /// <param name="mouseButtons">Mouse buttons that are pressed while drawing node.</param>
-        public void Draw(Graphics g, Point mouseLocation, MouseButtons mouseButtons)
+        public void Draw(Graphics g, Point mouseLocation, MouseButtons mouseButtons, bool isRunMode)
         {
             var rect = new RectangleF(new PointF((float)this.X, (float)this.Y), GetNodeBounds());
 
+            // Draw shadow
+            bool isHover = rect.Contains(mouseLocation);
+            int offset = isHover ? 6 : 4;
+            g.FillRectangle(Brushes.DarkGray, new RectangleF(new PointF(this.X + offset, this.Y + offset), rect.Size));
+            
             var feedrect = rect;
             feedrect.Inflate(10, 10);
 
@@ -326,13 +340,7 @@ namespace NodeEditor
 
             Color fillColor = NodeColor;
 
-            bool isHover = rect.Contains(mouseLocation);
-            if (isHover)
-            {
-                fillColor = Color.White;
-            }
-
-            if (IsSelected)
+            if (IsSelected && !isRunMode)
             {
                 fillColor = Color.PaleGoldenrod;
             }

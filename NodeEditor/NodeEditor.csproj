@@ -50,6 +50,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AnimateForms\Animate.cs" />
+    <Compile Include="AnimateForms\Easings.cs" />
+    <Compile Include="AnimateForms\Helpers.cs" />
+    <Compile Include="AnimateForms\Options.cs" />
     <Compile Include="Autocomplete\AutocompleteItem.cs" />
     <Compile Include="Autocomplete\AutocompleteItems.cs" />
     <Compile Include="Autocomplete\AutocompleteListView.cs">
