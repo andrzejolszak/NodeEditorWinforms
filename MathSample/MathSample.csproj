@@ -50,6 +50,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ControlNodeEditor.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="ControlNodeEditor.Designer.cs">
+      <DependentUpon>ControlNodeEditor.cs</DependentUpon>
+    </Compile>
     <Compile Include="FormMathSample.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -59,6 +65,9 @@
     <Compile Include="MathContext.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <EmbeddedResource Include="ControlNodeEditor.resx">
+      <DependentUpon>ControlNodeEditor.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="FormMathSample.resx">
       <DependentUpon>FormMathSample.cs</DependentUpon>
     </EmbeddedResource>
@@ -92,10 +101,11 @@
       <Project>{2a51d621-3e0d-4293-a2ad-964721bfff7b}</Project>
       <Name>NodeEditor</Name>
     </ProjectReference>
-    <ProjectReference Include="..\SampleCommon\SampleCommon.csproj">
-      <Project>{b3f8f101-029b-4c8f-bb3f-5720075ea634}</Project>
-      <Name>SampleCommon</Name>
-    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\grid.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

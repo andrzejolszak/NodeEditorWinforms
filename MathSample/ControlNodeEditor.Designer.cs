@@ -1,4 +1,6 @@
-﻿namespace SampleCommon
+﻿using System.Drawing;
+
+namespace SampleCommon
 {
     partial class ControlNodeEditor
     {
@@ -45,7 +47,7 @@
             // 
             // nodesControl
             // 
-            this.nodesControl.BackgroundImage = global::SampleCommon.Properties.Resources.grid;
+            this.nodesControl.BackgroundImage = Image.FromFile(".\\Resources\\grid.png");
             this.nodesControl.Context = null;
             this.nodesControl.Location = new System.Drawing.Point(0, 0);
             this.nodesControl.Name = "nodesControl";
