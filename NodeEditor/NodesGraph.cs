@@ -15,6 +15,7 @@
  * OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+using AnimateForms.Core;
 using Supercluster.KDTree;
 using System;
 using System.Collections.Generic;
@@ -43,14 +44,14 @@ namespace NodeEditor
 
         public string GUID = Guid.NewGuid().ToString();
 
-        public void Draw(Graphics g, Point mouseLocation, MouseButtons mouseButtons, bool isRunMode)
+        public void Draw(Graphics g, Point mouseLocation, MouseButtons mouseButtons, bool isRunMode, Animate animate)
         {
             g.InterpolationMode = InterpolationMode.Low;
             g.SmoothingMode = SmoothingMode.HighSpeed;
 
             g.FillRectangle(new SolidBrush(Color.FromArgb(220, Color.White)), g.ClipBounds);
 
-            var orderedNodes = Nodes.OrderByDescending(x => x.Order);
+            var orderedNodes = Nodes.OrderBy(x => x.BoundingBox.LeftTop);
             foreach (var node in orderedNodes)
             {
                 node.Draw(g, mouseLocation, mouseButtons, isRunMode);
@@ -69,23 +70,11 @@ namespace NodeEditor
 
             _points.Clear();
 
-            var cpen = Pens.Black;
-            var epen = new Pen(Color.Gold, 3);
-            var epen2 = new Pen(Color.Black, 2);
-            // epen2.StartCap = LineCap.ArrowAnchor;
-
             for (int i = 0; i < this.Connections.Count; i++)
             {
                 NodeConnection connection = this.Connections[i];
-                var osoc = connection.OutputSocket;
-                var beginSocket = osoc.GetBounds();
-                var isoc = connection.InputSocket;
-                var endSocket = isoc.GetBounds();
-                var begin = beginSocket.Location + new SizeF(beginSocket.Width / 2f, beginSocket.Height);
-                var end = endSocket.Location + new SizeF(endSocket.Width / 2f, 0f);
-
                 bool isHover = connection == _hoverConnection;
-                PointF[] points = DrawConnection(g, isHover ? epen2 : cpen, begin, end);
+                PointF[] points = connection.Draw(g, isHover, isRunMode, animate);
                 _points.Add((connection, points));
             }
 
@@ -115,76 +104,6 @@ namespace NodeEditor
                     _treeRecalc = false;
                 });
             }
-        }
-
-        public static PointF[] DrawConnection(Graphics g, Pen pen, PointF output, PointF input)
-        {
-            g.InterpolationMode = InterpolationMode.HighQualityBilinear;
-            g.SmoothingMode = SmoothingMode.HighQuality;
-
-            if (input == output)
-                return new PointF[0];
-
-            const int interpolation = 48;
-
-            PointF[] points = new PointF[interpolation];
-            for (int i = 0; i < interpolation; i++)
-            {
-                float amount = i/(float) (interpolation - 1);
-               
-                var d = Math.Min(Math.Abs(input.X - output.X), 50);
-                var a = new PointF(output.X, (float) Scale(amount, 0, 1, output.Y, output.Y + d));
-                var b = new PointF(input.X, (float) Scale(amount, 0, 1, input.Y-d, input.Y));
-
-                var bas = Sat(Scale(amount, 0, 1, 0, 1));       
-                var cos = Math.Cos(bas*Math.PI);
-                if (cos < 0)
-                {
-                    cos = -Math.Pow(-cos, 0.2);
-                }
-                else
-                {
-                    cos = Math.Pow(cos, 0.2);
-                }
-
-                // amount = (float)cos * -0.5f + 0.5f;
-
-                var f = Lerp(a, b, amount);
-                points[i] = f;
-
-                if (i > 0 && pen.StartCap == LineCap.ArrowAnchor)
-                {
-                    g.DrawLine(pen, points[i-1], points[i]);
-                }
-            }
-
-            g.DrawLines(pen, points);
-
-            return points;
-        }
-
-        public static double Sat(double x)
-        {
-            if (x < 0) return 0;
-            if (x > 1) return 1;
-            return x;
-        }
-
-
-        public static double Scale(double x, double a, double b, double c, double d)
-        {
-            double s = (x - a)/(b - a);
-            return s*(d - c) + c;
-        }
-
-        public static PointF Lerp(PointF a, PointF b, float amount)
-        {
-            PointF result = new PointF();
-
-            result.X = a.X*(1f - amount) + b.X*amount;
-            result.Y = a.Y*(1f - amount) + b.Y*amount;
-
-            return result;
         }
 
         /// <summary>
@@ -302,7 +221,6 @@ namespace NodeEditor
             bw.Write(node.Y);
             bw.Write(node.IsInteractive);
             bw.Write(node.Name);
-            bw.Write(node.Order);
             if (node.CustomEditor == null)
             {
                 bw.Write("");
@@ -331,7 +249,6 @@ namespace NodeEditor
             var loadedNode = new NodeVisual(name, x, y);
             loadedNode.IsInteractive = isInteractive;
             loadedNode.GUID = id;
-            loadedNode.Order = br.ReadInt32();
             var customEditorAssembly = br.ReadString();
             var customEditor = br.ReadString();
             string method = br.ReadString();

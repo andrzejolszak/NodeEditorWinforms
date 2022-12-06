@@ -55,22 +55,6 @@ namespace MathSample
         {
             if (controlNodeEditor.nodesControl.IsRunMode && o.IsInteractive)
             {
-                Color orgColor = o.NodeColor;
-                _ = this.controlNodeEditor.nodesControl.Animate.Recolor(
-                    o.GUID,
-                    orgColor,
-                    x => o.NodeColor = x,
-                    Easings.CubicIn,
-                    200,
-                    Color.Gold).ContinueWith(
-                        x => this.controlNodeEditor.nodesControl.Animate.Recolor(
-                            o.GUID,
-                            o.NodeColor,
-                            y => o.NodeColor = y,
-                            Easings.CubicOut,
-                            50,
-                            orgColor)
-                    );
                 controlNodeEditor.nodesControl.Execute(new Stack<NodeVisual>(new[]{ o }));
             }
         }

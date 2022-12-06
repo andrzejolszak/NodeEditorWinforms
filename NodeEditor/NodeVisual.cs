@@ -15,6 +15,7 @@
  * OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+using AnimateForms.Core;
 using Microsoft.Msagl.Core.Geometry.Curves;
 using Microsoft.Msagl.Core.Layout;
 using System;
@@ -55,7 +56,6 @@ namespace NodeEditor
         public string Name { get; private set; }
 
         internal MethodInfo MethodInf { get; set; }
-        internal int Order { get; set; }
         public bool IsInteractive { get; set; }
         public bool IsSelected { get; set; }
         public bool InvokeOnLoad { get; set; }
@@ -375,7 +375,7 @@ namespace NodeEditor
             }
         }
 
-        public void Execute(INodesContext context)
+        public void Execute(INodesContext context, Animate animate)
         {
             context.CurrentProcessingNode = this;
 
@@ -396,6 +396,23 @@ namespace NodeEditor
                     sock.Value = parameters[i];
                 }
             }
+
+            Color orgColor = this.NodeColor;
+            _ = animate.Recolor(
+                this.GUID,
+                orgColor,
+                x => this.NodeColor = x,
+                Easings.CubicIn,
+                200,
+                Color.Gold).ContinueWith(
+                    t => animate.Recolor(
+                        this.GUID,
+                        this.NodeColor,
+                        y => this.NodeColor = y,
+                        Easings.CubicOut,
+                        50,
+                        orgColor)
+                );
         }
 
         internal void LayoutEditor()

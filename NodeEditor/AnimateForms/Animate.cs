@@ -274,7 +274,7 @@ namespace AnimateForms.Core
             return true;
         }
 
-        public async Task<bool> Recolor(string name, Color initial, Action<Color> setter, Function easing, int duration, Color colorTo)
+        public async Task<bool> Recolor(string name, Color initial, Action<Color> setter, Function easing, int duration, Color colorTo, int intervalMs = 11)
         {
             if (_animating.Contains((name, "recolor")))
                 return false;
@@ -297,7 +297,7 @@ namespace AnimateForms.Core
             stopwatch.Start();
             while (stopwatch.ElapsedMilliseconds < duration)
             {
-                await Task.Delay(1);
+                await Task.Delay(intervalMs);
                 int time = (int)stopwatch.ElapsedMilliseconds;
                 if (time > duration) time = duration;
 

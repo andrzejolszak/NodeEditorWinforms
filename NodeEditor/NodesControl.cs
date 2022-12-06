@@ -105,7 +105,7 @@ namespace NodeEditor
             InitializeComponent();
             timer.Interval = 30;
             timer.Tick += TimerOnTick;
-            timer.Start();        
+            timer.Start();
 
             KeyDown += OnKeyDown;
             
@@ -127,8 +127,8 @@ namespace NodeEditor
         protected override void WndProc(ref Message m)
         {
             if (m.Msg == 7)
-            {                
-                return;                
+            {
+                return;
             }
             base.WndProc(ref m);
         }
@@ -138,6 +138,7 @@ namespace NodeEditor
             if (keyEventArgs.KeyCode == Keys.Delete)
             {
                 DeleteSelectedNodes(null);
+                DeleteHoveredConns();
             }
         }
 
@@ -154,14 +155,14 @@ namespace NodeEditor
         private void NodesControl_Paint(object sender, PaintEventArgs e)
         {
             e.Graphics.SmoothingMode = SmoothingMode.HighQuality;
-            e.Graphics.InterpolationMode = InterpolationMode.HighQualityBilinear;            
+            e.Graphics.InterpolationMode = InterpolationMode.HighQualityBilinear;
 
-            MainGraph.Draw(e.Graphics, PointToClient(MousePosition), MouseButtons, this.IsRunMode);            
+            MainGraph.Draw(e.Graphics, PointToClient(MousePosition), MouseButtons, this.IsRunMode, this.Animate);
 
             if (dragSocket != null)
             {
                 var pen = new Pen(Color.Black, 2);
-                NodesGraph.DrawConnection(e.Graphics, pen, dragConnectionBegin, dragConnectionEnd);
+                NodeConnection.DrawConnection(e.Graphics, pen, dragConnectionBegin, dragConnectionEnd);
             }
 
             if (selectionStart != PointF.Empty)
@@ -250,13 +251,13 @@ namespace NodeEditor
                 }
 
                 var node =
-                    MainGraph.Nodes.OrderBy(x => x.Order).FirstOrDefault(
+                    MainGraph.Nodes.OrderByDescending(x => x.BoundingBox.LeftTop).FirstOrDefault(
                         x => new RectangleF(new PointF(x.X, x.Y), x.GetNodeBounds()).Contains(e.Location));
 
                 if (!mdown && !IsRunMode)
                 {
                     var nodeWhole =
-                    MainGraph.Nodes.OrderBy(x => x.Order).FirstOrDefault(
+                    MainGraph.Nodes.OrderByDescending(x => x.BoundingBox.LeftTop).FirstOrDefault(
                         x => new RectangleF(new PointF(x.X, x.Y), x.GetNodeBounds()).Contains(e.Location));
                     if (nodeWhole != null)
                     {
@@ -373,7 +374,7 @@ namespace NodeEditor
             if (dragSocket != null)
             {
                 var nodeWhole =
-                    MainGraph.Nodes.OrderBy(x => x.Order).FirstOrDefault(
+                    MainGraph.Nodes.OrderByDescending(x => x.BoundingBox.LeftTop).FirstOrDefault(
                         x => new RectangleF(new PointF(x.X, x.Y), x.GetNodeBounds()).Contains(e.Location));
                 if (nodeWhole != null)
                 {
@@ -417,12 +418,13 @@ namespace NodeEditor
                 return;
             }
 
-            var newAutocompleteNode = new NodeVisual(NodeVisual.NewSpecialNodeName, lastMouseLocation.X, lastMouseLocation.Y - NodeVisual.HeaderHeight);
-            newAutocompleteNode.IsInteractive = false;
-            newAutocompleteNode.Order = MainGraph.Nodes.Count;
-            newAutocompleteNode.CustomWidth = -1;
-            newAutocompleteNode.CustomHeight = -1;
-            newAutocompleteNode.OwnerGraph = MainGraph;
+            var newAutocompleteNode = new NodeVisual(NodeVisual.NewSpecialNodeName, lastMouseLocation.X, lastMouseLocation.Y - NodeVisual.HeaderHeight)
+            {
+                IsInteractive = false,
+                CustomWidth = -1,
+                CustomHeight = -1,
+                OwnerGraph = MainGraph
+            };
 
             TextBox tb = new TextBox();
             tb.Width = (int)NodeVisual.NodeWidth - 4;
@@ -465,9 +467,10 @@ namespace NodeEditor
                         return;
                     }
 
-                    replacementNode = new NodeVisual(NodeVisual.NewSubsystemNodeNamePrefix + " " + name, newAutocompleteNode.X, newAutocompleteNode.Y);
-                    replacementNode.Order = MainGraph.Nodes.Count;
-                    replacementNode.SubsystemGraph = new NodesGraph() { GUID = name };
+                    replacementNode = new NodeVisual(NodeVisual.NewSubsystemNodeNamePrefix + " " + name, newAutocompleteNode.X, newAutocompleteNode.Y)
+                    {
+                        SubsystemGraph = new NodesGraph() { GUID = name }
+                    };
                     replacementNode.SubsystemGraph.OwnerNode = replacementNode;
                     replacementNode.OwnerGraph = MainGraph;
                 }
@@ -480,7 +483,6 @@ namespace NodeEditor
                     }
 
                     replacementNode = new NodeVisual(NodeVisual.NewSubsystemInletNodeNamePrefix + " " + name, newAutocompleteNode.X, newAutocompleteNode.Y);
-                    replacementNode.Order = MainGraph.Nodes.Count;
                     replacementNode.OwnerGraph = MainGraph;
                 }
                 else if (tb.Text.StartsWith(NodeVisual.NewSubsystemOutletNodeNamePrefix))
@@ -492,7 +494,6 @@ namespace NodeEditor
                     }
 
                     replacementNode = new NodeVisual(NodeVisual.NewSubsystemOutletNodeNamePrefix + " " + name, newAutocompleteNode.X, newAutocompleteNode.Y);
-                    replacementNode.Order = MainGraph.Nodes.Count;
                     replacementNode.OwnerGraph = MainGraph;
                 }
                 else
@@ -513,14 +514,15 @@ namespace NodeEditor
                         return;
                     }
 
-                    replacementNode = new NodeVisual(name, newAutocompleteNode.X, newAutocompleteNode.Y);
-                    replacementNode.MethodInf = info;
-                    replacementNode.IsInteractive = attrib.IsInteractive;
-                    replacementNode.Order = MainGraph.Nodes.Count;
-                    replacementNode.CustomWidth = attrib.Width;
-                    replacementNode.CustomHeight = attrib.Height;
-                    replacementNode.InvokeOnLoad = attrib.InvokeOnLoad;
-                    replacementNode.OwnerGraph = MainGraph;
+                    replacementNode = new NodeVisual(name, newAutocompleteNode.X, newAutocompleteNode.Y)
+                    {
+                        MethodInf = info,
+                        IsInteractive = attrib.IsInteractive,
+                        CustomWidth = attrib.Width,
+                        CustomHeight = attrib.Height,
+                        InvokeOnLoad = attrib.InvokeOnLoad,
+                        OwnerGraph = MainGraph
+                    };
 
                     if (attrib.CustomEditor != null)
                     {
@@ -553,49 +555,57 @@ namespace NodeEditor
 
             if (e.Button == MouseButtons.Right)
             {
-                var node = MainGraph.Nodes.OrderBy(x => x.Order).FirstOrDefault(
+                var node = MainGraph.Nodes.OrderByDescending(x => x.BoundingBox.LeftTop).FirstOrDefault(
                         x => new RectangleF(new PointF(x.X, x.Y), x.GetNodeBounds()).Contains(e.Location));
-                
-                if (node is null && !MainGraph.Nodes.Exists(x => x.IsSelected))
-                {
-                    return;
-                }
 
-                var context = new ContextMenuStrip();
-
-                context.Items.Add("Delete Node(s)", null, ((o, args) =>
+                if (node != null || MainGraph.Nodes.Exists(x => x.IsSelected))
                 {
-                    DeleteSelectedNodes(node);
-                }));
+                    var context = new ContextMenuStrip();
 
-                context.Items.Add("Duplicate Node(s)", null, ((o, args) =>
-                {
-                    DuplicateSelectedNodes(node);
-                }));
-
-                context.Items.Add("Change Color ...", null, ((o, args) =>
-                {
-                    ChangeSelectedNodesColor(node);
-                }));
-
-                if (MainGraph.Nodes.Count(x => x.IsSelected) == 2)
-                {
-                    var sel = MainGraph.Nodes.Where(x => x.IsSelected).ToArray();
-                    context.Items.Add("Check Impact", null, ((o, args) =>
+                    context.Items.Add("Delete Node(s)", null, ((o, args) =>
                     {
-                        if (HasImpact(sel[0], sel[1]) || HasImpact(sel[1], sel[0]))
-                        {
-                            MessageBox.Show("One node has impact on other.", "Impact detected.", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        }
-                        else
-                        {
-                            MessageBox.Show("These nodes not impacts themselves.", "No impact.", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        }
+                        DeleteSelectedNodes(node);
                     }));
-                }
-                context.Items.Add(new ToolStripSeparator());
 
-                context.Show(MousePosition);
+                    context.Items.Add("Duplicate Node(s)", null, ((o, args) =>
+                    {
+                        DuplicateSelectedNodes(node);
+                    }));
+
+                    context.Items.Add("Change Color ...", null, ((o, args) =>
+                    {
+                        ChangeSelectedNodesColor(node);
+                    }));
+
+                    if (MainGraph.Nodes.Count(x => x.IsSelected) == 2)
+                    {
+                        var sel = MainGraph.Nodes.Where(x => x.IsSelected).ToArray();
+                        context.Items.Add("Check Impact ???", null, ((o, args) =>
+                        {
+                            if (HasImpact(sel[0], sel[1]) || HasImpact(sel[1], sel[0]))
+                            {
+                                MessageBox.Show("One node has impact on other.", "Impact detected.", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            }
+                            else
+                            {
+                                MessageBox.Show("These nodes not impacts themselves.", "No impact.", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            }
+                        }));
+                    }
+
+                    context.Show(MousePosition);
+                }
+                else if (MainGraph.Connections.Any(x => x.IsHover))
+                {
+                    var context = new ContextMenuStrip();
+
+                    context.Items.Add("Delete Connection(s)", null, ((o, args) =>
+                    {
+                        DeleteHoveredConns();
+                    }));
+
+                    context.Show(MousePosition);
+                }
             }
         }
 
@@ -650,6 +660,7 @@ namespace NodeEditor
         private void DeleteSelectedNodes(NodeVisual node)
         {
             NodeVisual[] selected = MainGraph.Nodes.Where(x => x.IsSelected).Concat(new[] { node }).Where(x => x != null).ToArray();
+
             if (selected.Length > 0)
             {
                 foreach (var n in selected)
@@ -658,7 +669,20 @@ namespace NodeEditor
                     MainGraph.Connections.RemoveAll(
                         x => x.OutputNode == n || x.InputNode == n);
                 }
+
                 MainGraph.Nodes.RemoveAll(x => selected.Contains(x));
+            }
+
+            Invalidate();
+        }
+
+        private void DeleteHoveredConns()
+        {
+            NodeConnection[] selected = MainGraph.Connections.Where(x => x.IsHover).ToArray();
+
+            if (selected.Length > 0)
+            {
+                MainGraph.Connections.RemoveAll(x => selected.Contains(x));
             }
 
             Invalidate();
@@ -688,7 +712,7 @@ namespace NodeEditor
         /// </summary>
         /// <param name="node"></param>
         public void Execute(Stack<NodeVisual> queue)
-        {            
+        {
             var nodeQueue = queue;
             while (nodeQueue.Count > 0)
             {
@@ -708,16 +732,16 @@ namespace NodeEditor
                 init.Feedback = FeedbackType.Debug;
 
                 // TODO: reset outputs/values
-                init.Execute(Context);
+                init.Execute(Context, this.Animate);
 
                 foreach (var connection in MainGraph.Connections)
                 {
-                    if (connection.OutputNode != init || (connection.OutputSocket.Value is Bang && connection.InputSocket.Type != typeof(Bang)))
+                    if (connection.OutputNode != init)
                     {
                         continue;
                     }
 
-                    connection.InputSocket.Value = connection.OutputSocket.Value;
+                    connection.PropagateValue(Context, this.Animate);
                 }
 
                 foreach (var connection in MainGraph.Connections.Where(x => x.OutputNode == init && x.OutputSocket.Value != null))
@@ -742,6 +766,8 @@ namespace NodeEditor
                         }
                     }
                 }
+
+                this.needRepaint = true;
             }
         }
 
