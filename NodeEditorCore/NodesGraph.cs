@@ -25,7 +25,6 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
-using System.Windows.Forms;
 
 namespace NodeEditor
 {
@@ -291,7 +290,7 @@ namespace NodeEditor
                 }
                 else
                 {
-                    loadedNode.CustomEditor = Activator.CreateInstance(AppDomain.CurrentDomain, customEditorAssembly, customEditor).Unwrap() as Control;
+                    loadedNode.CustomEditor = Activator.CreateInstance(customEditorAssembly, customEditor).Unwrap() as Control;
                 }
 
                 Control ctrl = loadedNode.CustomEditor;

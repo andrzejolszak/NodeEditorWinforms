@@ -17,6 +17,7 @@ using System.Drawing;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using System.Collections;
+using Timer = System.Windows.Forms.Timer;
 
 namespace AutocompleteMenuNS
 {

@@ -27,6 +27,7 @@ using System.Windows.Forms;
 using System.Xml.Linq;
 using AnimateForms.Core;
 using Microsoft.Msagl.Core.Layout;
+using Timer = System.Windows.Forms.Timer;
 
 namespace NodeEditor
 {
