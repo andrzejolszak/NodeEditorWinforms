@@ -28,6 +28,8 @@ using System.Xml.Linq;
 using AnimateForms.Core;
 using Microsoft.Msagl.Core.Layout;
 using Timer = System.Windows.Forms.Timer;
+using System.Configuration;
+using System.Net.Sockets;
 
 namespace NodeEditor
 {
@@ -192,6 +194,7 @@ namespace NodeEditor
             {
                 selectionEnd = e.Location;
             }
+
             if (mdown && !IsRunMode)
             {                                            
                 foreach (var node in MainGraph.Nodes.Where(x => x.IsSelected))
@@ -209,8 +212,10 @@ namespace NodeEditor
                     {
                         bound = RectangleF.Union(bound, new RectangleF(new PointF(node.X, node.Y), node.GetNodeBounds()));
                     }
+
                     OnShowLocation(bound);
                 }
+
                 Invalidate();
                 
                 if (dragSocket != null)
@@ -340,7 +345,7 @@ namespace NodeEditor
             var otype = Type.GetType(output.Type.FullName.Replace("&", ""), AssemblyResolver, TypeResolver);
             var itype = Type.GetType(input.Type.FullName.Replace("&", ""), AssemblyResolver, TypeResolver);
             if (otype == null || itype == null) return false;
-            var allow = otype == typeof(Bang) || otype == itype || otype.IsSubclassOf(itype);
+            var allow = otype == typeof(Bang) || itype == typeof(Bang) || otype == itype || otype.IsSubclassOf(itype);
             return allow;
         }
 
@@ -353,8 +358,7 @@ namespace NodeEditor
 
         private Assembly ResolveAssembly(string fullTypeName)
         {
-            return AppDomain.CurrentDomain.GetAssemblies()
-                .FirstOrDefault(x => x.GetTypes().Any(o => o.FullName == fullTypeName));
+            return AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(x => x.GetTypes().Any(o => o.FullName == fullTypeName));
         }
 
         private Assembly AssemblyResolver(AssemblyName assemblyName)
@@ -364,6 +368,25 @@ namespace NodeEditor
 
         private void NodesControl_MouseUp(object sender, MouseEventArgs e)
         {
+            if (!IsRunMode
+                && this.MainGraph.Nodes.Count(x => x.IsSelected) == 1
+                && this.MainGraph.Connections.Count(x => x.IsHover) == 1)
+            {
+                NodeConnection hoverConn = this.MainGraph.Connections.First(x => x.IsHover);
+                NodeVisual node = MainGraph.Nodes.First(x => x.IsSelected);
+                var s = node.GetSockets();
+                if (s.Inputs.Count > 0 && s.Outputs.Count > 0 && !MainGraph.Connections.Exists(x => x.InputNode == node || x.OutputNode == node))
+                {
+                    if (IsConnectable(hoverConn.OutputSocket, s.Inputs.First())
+                        && IsConnectable(hoverConn.InputSocket, s.Outputs.First()))
+                    {
+                        MainGraph.Connections.Add(new NodeConnection(hoverConn.OutputNode, hoverConn.OutputSocketName, node, s.Inputs.First().Name));
+                        MainGraph.Connections.Add(new NodeConnection(node, s.Outputs.First().Name, hoverConn.InputNode, hoverConn.InputSocketName));
+                        MainGraph.Connections.Remove(hoverConn);
+                    }
+                }
+            }
+
             if (selectionStart != PointF.Empty)
             {
                 var rect = MakeRect(selectionStart, selectionEnd);
@@ -664,6 +687,25 @@ namespace NodeEditor
 
             if (selected.Length > 0)
             {
+                if (selected.Length == 1)
+                {
+                    NodeVisual sNode = selected[0];
+                    if (MainGraph.Connections.Count(x => x.InputNode == sNode) == 1
+                        && MainGraph.Connections.Count(x => x.OutputNode == sNode) == 1)
+                    {
+                        var s = sNode.GetSockets();
+                        NodeConnection? inCon = MainGraph.Connections.FirstOrDefault(x => x.InputSocket == s.Inputs.First());
+                        NodeConnection? outCon = MainGraph.Connections.FirstOrDefault(x => x.OutputSocket == s.Outputs.First());
+
+                        if (inCon is not null
+                            && outCon is not null 
+                            && IsConnectable(inCon.OutputSocket, outCon.InputSocket))
+                        {
+                            MainGraph.Connections.Add(new NodeConnection(inCon.OutputNode, inCon.OutputSocketName, outCon.InputNode, outCon.InputSocketName));
+                        }
+                    }
+                }
+
                 foreach (var n in selected)
                 {
                     Controls.Remove(n.CustomEditor);
@@ -732,8 +774,14 @@ namespace NodeEditor
                 NodeVisual init = nodeQueue.Pop();
                 init.Feedback = FeedbackType.Debug;
 
-                // TODO: reset outputs/values
-                init.Execute(Context, this.Animate);
+                try
+                {
+                    init.Execute(Context, this.Animate);
+                }
+                catch(Exception ex)
+                {
+                    init.Feedback = FeedbackType.Error;
+                }
 
                 foreach (var connection in MainGraph.Connections)
                 {
