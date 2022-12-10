@@ -39,7 +39,7 @@ namespace MathSample
             //Loading sample from file
             controlNodeEditor.nodesControl.MainGraph = mainGraph;
             controlNodeEditor.nodesControl.Controls.Clear();
-            controlNodeEditor.nodesControl.Controls.AddRange(mainGraph.Nodes.Where(x => x.CustomEditor != null).Select(x => x.CustomEditor).ToArray());
+            controlNodeEditor.nodesControl.Controls.AddRange(mainGraph.NodesTyped.Where(x => x.CustomEditor != null).Select(x => x.CustomEditor).ToArray());
             controlNodeEditor.nodesControl.Refresh();
 
             controlNodeEditor.nodesControl.OnSubgraphOpenRequest += NodesControl_OnSubgraphOpenRequest;

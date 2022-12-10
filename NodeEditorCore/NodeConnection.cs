@@ -16,15 +16,19 @@
  */
 
 using AnimateForms.Core;
+using Microsoft.Msagl.Core.Geometry;
+using Microsoft.Msagl.Core.Geometry.Curves;
 using Microsoft.Msagl.Core.Layout;
 using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Linq;
+using System.Runtime.CompilerServices;
+using P2 = Microsoft.Msagl.Core.Geometry.Point;
 
 namespace NodeEditor
 {    
-    internal class NodeConnection : Edge
+    public class NodeConnection : Edge
     {
         public NodeVisual OutputNode => this.Source as NodeVisual;
         public string OutputSocketName { get; }
@@ -50,6 +54,16 @@ namespace NodeEditor
 
         public PointF[] Draw(Graphics g, bool isHover, bool isRunMode, Animate animate)
         {
+            if (SourcePort is null)
+            {
+                this.SourcePort = this.OutputSocket;
+            }
+
+            if (TargetPort is null)
+            {
+                this.TargetPort = this.InputSocket;
+            }
+
             if (!this.IsHover && isHover)
             {
                 this.PenEmhemeral = new Pen(System.Drawing.Color.Black, 2);
@@ -68,9 +82,161 @@ namespace NodeEditor
             var begin = beginSocket.Location + new SizeF(beginSocket.Width / 2f, beginSocket.Height);
             var end = endSocket.Location + new SizeF(endSocket.Width / 2f, 0f);
 
-            PointF[] points = DrawConnection(g, this.PenEmhemeral, begin, end);
+            if (this.Curve is null)
+            {
+                PointF[] points = DrawConnection(g, this.PenEmhemeral, begin, end);
+                return points;
+            }
+            else
+            {
+                g.InterpolationMode = InterpolationMode.HighQualityBilinear;
+                g.SmoothingMode = SmoothingMode.HighQuality;
 
-            return points;
+                GraphicsPath path = CreateGraphicsPath(this.Curve);
+                g.DrawPath(this.PenEmhemeral, path);
+
+                return path.PathPoints;
+
+                GraphicsPath CreateGraphicsPath(ICurve iCurve)
+                {
+                    var graphicsPath = new GraphicsPath();
+                    if (iCurve == null)
+                        return null;
+
+                    var c = iCurve as Curve;
+
+                    if (c != null)
+                        HandleCurve(c, graphicsPath);
+                    else
+                    {
+                        var ls = iCurve as LineSegment;
+                        if (ls != null)
+                            graphicsPath.AddLine(PointF(ls.Start), PointF(ls.End));
+                        else
+                        {
+                            var seg = iCurve as CubicBezierSegment;
+                            if (seg != null)
+                                graphicsPath.AddBezier(PointF(seg.B(0)), PointF(seg.B(1)), PointF(seg.B(2)), PointF(seg.B(3)));
+                            else
+                            {
+                                var ellipse = iCurve as Ellipse;
+                                if (ellipse != null)
+                                    AddEllipseSeg(graphicsPath, iCurve as Ellipse);
+                                else
+                                {
+                                    var poly = iCurve as Polyline;
+                                    if (poly != null) HandlePolyline(poly, graphicsPath);
+                                    else
+                                    {
+                                        var rr = (RoundedRect)iCurve;
+                                        HandleCurve(rr.Curve, graphicsPath);
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    /* 
+                     if (false) {
+                         if (c != null) {
+                             foreach (var s in c.Segments) {
+                                 CubicBezierSegment cubic = s as CubicBezierSegment;
+                                 if (cubic != null)
+                                     foreach (var t in cubic.MaximalCurvaturePoints) {
+                                         graphicsPath.AddPath(CreatePathOnCurvaturePoint(t, cubic), false);
+                                     }
+
+                             }
+                         } else {
+                             CubicBezierSegment cubic = iCurve as CubicBezierSegment;
+                             if (cubic != null) {
+                                 foreach (var t in cubic.MaximalCurvaturePoints) {
+                                     graphicsPath.AddPath(CreatePathOnCurvaturePoint(t, cubic), false);
+                                 }
+                             }
+                         }
+                     }
+
+                      */
+
+                    return graphicsPath;
+                }
+
+                PointF PointF(P2 p)
+                {
+                    return new PointF((float)p.X, (float)p.Y);
+                }
+
+                void HandlePolyline(Polyline poly, GraphicsPath graphicsPath)
+                {
+                    graphicsPath.AddLines(poly.Select(PointF).ToArray());
+                    if (poly.Closed)
+                        graphicsPath.CloseFigure();
+                }
+
+                void HandleCurve(Curve c, GraphicsPath graphicsPath)
+                {
+                    foreach (ICurve seg in c.Segments)
+                    {
+                        var cubic = seg as CubicBezierSegment;
+                        if (cubic != null)
+                            graphicsPath.AddBezier(PointF(cubic.B(0)), PointF(cubic.B(1)), PointF(cubic.B(2)),
+                                                   PointF(cubic.B(3)));
+                        else
+                        {
+                            var ls = seg as LineSegment;
+                            if (ls != null)
+                                graphicsPath.AddLine(PointF(ls.Start), PointF(ls.End));
+                            else
+                            {
+                                var el = seg as Ellipse;
+                                //                            double del = (el.ParEnd - el.ParStart)/11.0;
+                                //                            graphicsPath.AddLines(Enumerable.Range(1, 10).Select(i => el[el.ParStart + del*i]).
+                                //                                    Select(p => new PointF((float) p.X, (float) p.Y)).ToArray());
+
+                                AddEllipseSeg(graphicsPath, el);
+                            }
+                        }
+                    }
+                }
+
+                void AddEllipseSeg(GraphicsPath graphicsPath, Ellipse el)
+                {
+                    const double ToDegreesMultiplier = 180 / Math.PI;
+
+                    double sweepAngle;
+                    Microsoft.Msagl.Core.Geometry.Rectangle box;
+                    float startAngle;
+                    GetGdiArcDimensions(el, out startAngle, out sweepAngle, out box);
+
+                    graphicsPath.AddArc((float)box.Left,
+                                        (float)box.Bottom,
+                                        (float)box.Width,
+                                        (float)box.Height,
+                                        startAngle,
+                                        (float)sweepAngle);
+
+                    void GetGdiArcDimensions(Ellipse ellipse, out float startAngle, out double sweepAngle, out Microsoft.Msagl.Core.Geometry.Rectangle box)
+                    {
+                        box = ellipse.FullBox();
+                        startAngle = EllipseStandardAngle(ellipse, ellipse.ParStart);
+                        bool orientedCcw = ellipse.OrientedCounterclockwise();
+                        if (Math.Abs((Math.Abs(ellipse.ParEnd - ellipse.ParStart) - Math.PI * 2)) < 0.001)//we have a full ellipse
+                            sweepAngle = 360;
+                        else
+                            sweepAngle = (orientedCcw ? P2.Angle(ellipse.Start, ellipse.Center, ellipse.End) : P2.Angle(ellipse.End, ellipse.Center, ellipse.Start))
+                                * ToDegreesMultiplier;
+                        if (!orientedCcw)
+                            sweepAngle = -sweepAngle;
+                    }
+
+                    float EllipseStandardAngle(Ellipse ellipse, double angle)
+                    {
+                        P2 p = Math.Cos(angle) * ellipse.AxisA + Math.Sin(angle) * ellipse.AxisB;
+                        return (float)(Math.Atan2(p.Y, p.X) * ToDegreesMultiplier);
+                    }
+                }
+            }
         }
 
         public static PointF[] DrawConnection(Graphics g, Pen pen, PointF output, PointF input)

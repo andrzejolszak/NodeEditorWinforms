@@ -156,8 +156,8 @@ namespace NodeEditor
                     // TODO: hot sockets
                     // TODO: probably create new socket objects?
                     // TOOD: clean connections? or refer only by name?
-                    float inlParamsCount = this.SubsystemGraph.Nodes.Count(x => x.Type == NodeType.Inlet);
-                    float outlParamsCount = this.SubsystemGraph.Nodes.Count(x => x.Type == NodeType.Outlet);
+                    float inlParamsCount = this.SubsystemGraph.Nodes.Cast<NodeVisual>().Count(x => x.Type == NodeType.Inlet);
+                    float outlParamsCount = this.SubsystemGraph.Nodes.Cast<NodeVisual>().Count(x => x.Type == NodeType.Outlet);
 
                     foreach (NodeVisual sn in this.SubsystemGraph.Nodes)
                     {
@@ -305,7 +305,7 @@ namespace NodeEditor
                 csize.Height = CustomHeight;
             }
 
-            this.BoundingBox = new Microsoft.Msagl.Core.Geometry.Rectangle(this.BoundingBox.Left, this.BoundingBox.Bottom, new Microsoft.Msagl.Core.Geometry.Point(csize.Width, csize.Height));
+            this.BoundaryCurve = CurveFactory.CreateRectangle(new Microsoft.Msagl.Core.Geometry.Rectangle(this.BoundingBox.Left, this.BoundingBox.Bottom, new Microsoft.Msagl.Core.Geometry.Point(csize.Width, csize.Height)));
 
             return new SizeF((float)this.BoundingBox.Width, (float)this.BoundingBox.Height);
 ;

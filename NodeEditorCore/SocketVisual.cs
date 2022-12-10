@@ -15,6 +15,7 @@
  * OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+using Microsoft.Msagl.Core.Geometry.Curves;
 using Microsoft.Msagl.Core.Layout;
 using System;
 using System.Drawing;
@@ -49,6 +50,8 @@ namespace NodeEditor
         public override Microsoft.Msagl.Core.Geometry.Point LocationOffset => this._locationOffset;
 
         private Microsoft.Msagl.Core.Geometry.Point _locationOffset;
+
+        public override ICurve Curve => CurveFactory.CreateRectangle(this.Width, this.Height, new Microsoft.Msagl.Core.Geometry.Point(this.Location.X + this.Width / 2, this.Location.Y + this.Height / 2));
 
         public void SetLocationOffset(double x, double y)
         {

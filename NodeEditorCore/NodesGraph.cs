@@ -16,30 +16,28 @@
  */
 
 using AnimateForms.Core;
+using Microsoft.Msagl.Core.Layout;
+using Microsoft.Msagl.Layout.LargeGraphLayout;
 using Supercluster.KDTree;
-using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Drawing.Drawing2D;
-using System.IO;
-using System.Linq;
-using System.Reflection;
-using System.Threading.Tasks;
+using System.Drawing.Drawing2D; 
+using Label = System.Windows.Forms.Label;
 
 namespace NodeEditor
 {
-    public class NodesGraph
+    public class NodesGraph : GeometryGraph
     {
         public NodeVisual OwnerNode { get; set; }
         private const int HoverThrottlingMs = 10;
-        public List<NodeVisual> Nodes = new List<NodeVisual>();
-        internal List<NodeConnection> Connections = new List<NodeConnection>();
         internal KDTree<float, NodeConnection> KdTree = null;
         private List<(NodeConnection, PointF[])> _points = new List<(NodeConnection, PointF[])>();
         private float _pointsChecksum = 0;
         private bool _treeRecalc = false;
         private bool _hoverRecalc = false;
         private NodeConnection _hoverConnection;
+
+        public IEnumerable<NodeVisual> NodesTyped => this.Nodes.Cast<NodeVisual>();
+
+        public IEnumerable<NodeConnection> EdgesTyped => this.Edges.Cast<NodeConnection>();
 
         public string GUID = Guid.NewGuid().ToString();
 
@@ -53,7 +51,7 @@ namespace NodeEditor
             var orderedNodes = Nodes.OrderBy(x => x.BoundingBox.LeftTop);
             foreach (var node in orderedNodes)
             {
-                node.Draw(g, mouseLocation, mouseButtons, isRunMode);
+                (node as NodeVisual).Draw(g, mouseLocation, mouseButtons, isRunMode);
             }
 
             if (KdTree != null && !_hoverRecalc)
@@ -69,9 +67,8 @@ namespace NodeEditor
 
             _points.Clear();
 
-            for (int i = 0; i < this.Connections.Count; i++)
+            foreach (NodeConnection connection in this.Edges)
             {
-                NodeConnection connection = this.Connections[i];
                 bool isHover = connection == _hoverConnection;
                 PointF[] points = connection.Draw(g, isHover, isRunMode, animate);
                 _points.Add((connection, points));
@@ -144,15 +141,15 @@ namespace NodeEditor
                     for (int i = 0; i < connectionsCount; i++)
                     {
                         var og = br.ReadString();
-                        NodeVisual outputNode = graph.Nodes.FirstOrDefault(x => x.GUID == og);
+                        NodeVisual outputNode = graph.NodesTyped.FirstOrDefault(x => x.GUID == og);
                         string outputSocketName = br.ReadString();
                         var ig = br.ReadString();
-                        NodeVisual inputNode = graph.Nodes.FirstOrDefault(x => x.GUID == ig);
+                        NodeVisual inputNode = graph.NodesTyped.FirstOrDefault(x => x.GUID == ig);
                         string inputSocketName = br.ReadString();
                         var con = new NodeConnection(outputNode, outputSocketName, inputNode, inputSocketName);
                         br.ReadBytes(br.ReadInt32()); //read additional data
 
-                        graph.Connections.Add(con);
+                        graph.AddEdge(con);
                     }
 
                     br.ReadBytes(br.ReadInt32()); //read additional data
@@ -178,7 +175,7 @@ namespace NodeEditor
         public static byte[] Serialize(NodesGraph mainGraph)
         {
             List<NodesGraph> graphs = new List<NodesGraph>() { mainGraph };
-            graphs.AddRange(mainGraph.Nodes.Where(x => x.SubsystemGraph != null).Select(x => x.SubsystemGraph));
+            graphs.AddRange(mainGraph.NodesTyped.Where(x => x.SubsystemGraph != null).Select(x => x.SubsystemGraph));
             using (var bw = new BinaryWriter(new MemoryStream()))
             {
                 bw.Write("NodeSystemP"); //recognization string
@@ -192,11 +189,11 @@ namespace NodeEditor
                     bw.Write(graph.Nodes.Count);
                     foreach (var node in graph.Nodes)
                     {
-                        SerializeNode(bw, node);
+                        SerializeNode(bw, node as NodeVisual);
                     }
 
-                    bw.Write(graph.Connections.Count);
-                    foreach (var connection in graph.Connections)
+                    bw.Write(graph.Edges.Count);
+                    foreach (NodeConnection connection in graph.Edges)
                     {
                         bw.Write(connection.OutputNode.GUID);
                         bw.Write(connection.OutputSocketName);
@@ -302,6 +299,54 @@ namespace NodeEditor
                 loadedNode.LayoutEditor();
             }
             return (loadedNode, subsystemGuid);
+        }
+
+        internal void AddEdge(NodeConnection nodeConnection)
+        {
+            this.Edges.Add(nodeConnection);
+            nodeConnection.InputNode.AddInEdge(nodeConnection);
+            nodeConnection.OutputNode.AddOutEdge(nodeConnection);
+        }
+
+        internal void RemoveEdge(NodeConnection nodeConnection)
+        {
+            this.Edges.Remove(nodeConnection);
+            nodeConnection.InputNode.RemoveInEdge(nodeConnection);
+            nodeConnection.OutputNode.RemoveOutEdge(nodeConnection);
+        }
+
+        internal void RouteEdges()
+        {
+            var rectRouter = new Microsoft.Msagl.Routing.Rectilinear.RectilinearEdgeRouter(this, 3, 3, true);
+            rectRouter.Run();
+
+            //var portRouter = new Microsoft.Msagl.Routing.InteractiveEdgeRouter(this.Nodes.Select(n => n.BoundaryCurve), 3, 0.65 * 3, 0);
+            //portRouter.Run();
+
+            // var router = new SplineRouter(graph, 3, 3, Math.PI / 6, new BundlingSettings());
+            // router.Run();
+
+            // Partial
+            //foreach(var e in this.Edges)
+            //{
+            //    DrawEdgeWithPort(e, portRouter, 0.3, 0.4);
+            //}
+
+            void DrawEdgeWithPort(Edge edge, Microsoft.Msagl.Routing.InteractiveEdgeRouter portRouter, double par0, double par1)
+            {
+
+                var port0 = new CurvePort(edge.SourcePort.Curve, par0);
+                var port1 = new CurvePort(edge.TargetPort.Curve, par1);
+
+                Microsoft.Msagl.Core.Geometry.SmoothedPolyline sp;
+                var spline = portRouter.RouteSplineFromPortToPortWhenTheWholeGraphIsReady(port0, port1, true, out sp);
+
+                Arrowheads.TrimSplineAndCalculateArrowheads(edge.EdgeGeometry,
+                                                             edge.SourcePort.Curve,
+                                                             edge.TargetPort.Curve,
+                                                             spline, true);
+
+            }
         }
     }
 }

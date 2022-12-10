@@ -22,6 +22,11 @@ namespace SampleCommon
             {
                 nodesControl.ToggleRunMode();
             }
+
+            if (e.Control && e.KeyCode == Keys.R)
+            {
+                nodesControl.ToggleEdgeRouting();
+            }
         }
     }
 }

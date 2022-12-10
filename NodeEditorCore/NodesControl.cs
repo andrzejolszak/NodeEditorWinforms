@@ -30,6 +30,7 @@ using Microsoft.Msagl.Core.Layout;
 using Timer = System.Windows.Forms.Timer;
 using System.Configuration;
 using System.Net.Sockets;
+using System.Windows.Forms.VisualStyles;
 
 namespace NodeEditor
 {
@@ -71,6 +72,8 @@ namespace NodeEditor
         }
 
         public bool IsRunMode { get; private set; }
+
+        public bool EdgeRoutingEnabled { get; private set; }
 
         /// <summary>
         /// Occurs when user selects a node. In the object will be passed node settings for unplugged inputs/outputs.
@@ -160,6 +163,11 @@ namespace NodeEditor
             e.Graphics.SmoothingMode = SmoothingMode.HighQuality;
             e.Graphics.InterpolationMode = InterpolationMode.HighQualityBilinear;
 
+            if (this.EdgeRoutingEnabled)
+            {
+                MainGraph.RouteEdges();
+            }
+
             MainGraph.Draw(e.Graphics, PointToClient(MousePosition), MouseButtons, this.IsRunMode, this.Animate);
 
             if (dragSocket != null)
@@ -197,18 +205,18 @@ namespace NodeEditor
 
             if (mdown && !IsRunMode)
             {                                            
-                foreach (var node in MainGraph.Nodes.Where(x => x.IsSelected))
+                foreach (var node in MainGraph.NodesTyped.Where(x => x.IsSelected))
                 {
                     node.BoundaryCurve.Translate(new Microsoft.Msagl.Core.Geometry.Point(em.X - lastmpos.X, em.Y - lastmpos.Y));
 
                     node.LayoutEditor();
                 }
 
-                if (MainGraph.Nodes.Exists(x => x.IsSelected))
+                if (MainGraph.NodesTyped.Any(x => x.IsSelected))
                 {
-                    var n = MainGraph.Nodes.FirstOrDefault(x => x.IsSelected);
+                    var n = MainGraph.NodesTyped.FirstOrDefault(x => x.IsSelected);
                     var bound = new RectangleF(new PointF(n.X,n.Y), n.GetNodeBounds());
-                    foreach (var node in MainGraph.Nodes.Where(x=>x.IsSelected))
+                    foreach (var node in MainGraph.NodesTyped.Where(x=>x.IsSelected))
                     {
                         bound = RectangleF.Union(bound, new RectangleF(new PointF(node.X, node.Y), node.GetNodeBounds()));
                     }
@@ -253,17 +261,20 @@ namespace NodeEditor
 
                 if ((ModifierKeys & Keys.Shift) != Keys.Shift)
                 {
-                    MainGraph.Nodes.ForEach(x => x.IsSelected = false);
+                    foreach(NodeVisual n in MainGraph.Nodes)
+                    {
+                        n.IsSelected = false;
+                    }
                 }
 
                 var node =
-                    MainGraph.Nodes.OrderByDescending(x => x.BoundingBox.LeftTop).FirstOrDefault(
+                    MainGraph.NodesTyped.OrderByDescending(x => x.BoundingBox.LeftTop).FirstOrDefault(
                         x => new RectangleF(new PointF(x.X, x.Y), x.GetNodeBounds()).Contains(e.Location));
 
                 if (!mdown && !IsRunMode)
                 {
                     var nodeWhole =
-                    MainGraph.Nodes.OrderByDescending(x => x.BoundingBox.LeftTop).FirstOrDefault(
+                    MainGraph.NodesTyped.OrderByDescending(x => x.BoundingBox.LeftTop).FirstOrDefault(
                         x => new RectangleF(new PointF(x.X, x.Y), x.GetNodeBounds()).Contains(e.Location));
                     if (nodeWhole != null)
                     {
@@ -274,7 +285,7 @@ namespace NodeEditor
                             if ((ModifierKeys & Keys.Control) == Keys.Control)
                             {
                                 var connection =
-                                    MainGraph.Connections.FirstOrDefault(
+                                    MainGraph.EdgesTyped.FirstOrDefault(
                                         x => x.InputNode == nodeWhole && x.InputSocketName == socket.Name);
 
                                 if (connection != null)
@@ -285,7 +296,7 @@ namespace NodeEditor
                                 else
                                 {
                                     connection =
-                                        MainGraph.Connections.FirstOrDefault(
+                                        MainGraph.EdgesTyped.FirstOrDefault(
                                             x => x.OutputNode == nodeWhole && x.OutputSocketName == socket.Name);
 
                                     if (connection != null)
@@ -295,7 +306,7 @@ namespace NodeEditor
                                     }
                                 }
 
-                                MainGraph.Connections.Remove(connection);
+                                MainGraph.RemoveEdge(connection);
                             }
                             else
                             {
@@ -369,20 +380,20 @@ namespace NodeEditor
         private void NodesControl_MouseUp(object sender, MouseEventArgs e)
         {
             if (!IsRunMode
-                && this.MainGraph.Nodes.Count(x => x.IsSelected) == 1
-                && this.MainGraph.Connections.Count(x => x.IsHover) == 1)
+                && this.MainGraph.NodesTyped.Count(x => x.IsSelected) == 1
+                && this.MainGraph.EdgesTyped.Count(x => x.IsHover) == 1)
             {
-                NodeConnection hoverConn = this.MainGraph.Connections.First(x => x.IsHover);
-                NodeVisual node = MainGraph.Nodes.First(x => x.IsSelected);
+                NodeConnection hoverConn = this.MainGraph.EdgesTyped.First(x => x.IsHover);
+                NodeVisual node = MainGraph.NodesTyped.First(x => x.IsSelected);
                 var s = node.GetSockets();
-                if (s.Inputs.Count > 0 && s.Outputs.Count > 0 && !MainGraph.Connections.Exists(x => x.InputNode == node || x.OutputNode == node))
+                if (s.Inputs.Count > 0 && s.Outputs.Count > 0 && !MainGraph.EdgesTyped.Any(x => x.InputNode == node || x.OutputNode == node))
                 {
                     if (IsConnectable(hoverConn.OutputSocket, s.Inputs.First())
                         && IsConnectable(hoverConn.InputSocket, s.Outputs.First()))
                     {
-                        MainGraph.Connections.Add(new NodeConnection(hoverConn.OutputNode, hoverConn.OutputSocketName, node, s.Inputs.First().Name));
-                        MainGraph.Connections.Add(new NodeConnection(node, s.Outputs.First().Name, hoverConn.InputNode, hoverConn.InputSocketName));
-                        MainGraph.Connections.Remove(hoverConn);
+                        MainGraph.AddEdge(new NodeConnection(hoverConn.OutputNode, hoverConn.OutputSocketName, node, s.Inputs.First().Name));
+                        MainGraph.AddEdge(new NodeConnection(node, s.Outputs.First().Name, hoverConn.InputNode, hoverConn.InputSocketName));
+                        MainGraph.RemoveEdge(hoverConn);
                     }
                 }
             }
@@ -390,15 +401,18 @@ namespace NodeEditor
             if (selectionStart != PointF.Empty)
             {
                 var rect = MakeRect(selectionStart, selectionEnd);
-                MainGraph.Nodes.ForEach(
-                    x => x.IsSelected = rect.Contains(new RectangleF(new PointF(x.X, x.Y), x.GetNodeBounds())));
+                foreach (NodeVisual x in MainGraph.Nodes)
+                {
+                    x.IsSelected = rect.Contains(new RectangleF(new PointF(x.X, x.Y), x.GetNodeBounds()));
+                }
+
                 selectionStart = PointF.Empty;
             }
 
             if (dragSocket != null)
             {
                 var nodeWhole =
-                    MainGraph.Nodes.OrderByDescending(x => x.BoundingBox.LeftTop).FirstOrDefault(
+                    MainGraph.NodesTyped.OrderByDescending(x => x.BoundingBox.LeftTop).FirstOrDefault(
                         x => new RectangleF(new PointF(x.X, x.Y), x.GetNodeBounds()).Contains(e.Location));
                 if (nodeWhole != null)
                 {
@@ -417,7 +431,7 @@ namespace NodeEditor
                                 nc = new NodeConnection(nodeWhole, socket.Name, dragSocketNode, dragSocket.Name);
                             }
 
-                            MainGraph.Connections.Add(nc);
+                            MainGraph.AddEdge(nc);
                         }
                     }
                 }
@@ -430,7 +444,7 @@ namespace NodeEditor
 
         private void NodesControl_DoubleMouseClick(object sender, MouseEventArgs e)
         {
-            NodeVisual selectedNode = MainGraph.Nodes.FirstOrDefault(x => x.IsSelected);
+            NodeVisual selectedNode = MainGraph.NodesTyped.FirstOrDefault(x => x.IsSelected);
             if (selectedNode?.SubsystemGraph != null)
             {
                 this.OnSubgraphOpenRequest?.Invoke(selectedNode);
@@ -501,7 +515,7 @@ namespace NodeEditor
                 else if (tb.Text.StartsWith(NodeVisual.NewSubsystemInletNodeNamePrefix))
                 {
                     string name = tb.Text.Substring(NodeVisual.NewSubsystemInletNodeNamePrefix.Length).Trim();
-                    if (name == "" || this.MainGraph.Nodes.Any(x => x.Name == NodeVisual.NewSubsystemInletNodeNamePrefix + " " + name))
+                    if (name == "" || this.MainGraph.NodesTyped.Any(x => x.Name == NodeVisual.NewSubsystemInletNodeNamePrefix + " " + name))
                     {
                         return;
                     }
@@ -512,7 +526,7 @@ namespace NodeEditor
                 else if (tb.Text.StartsWith(NodeVisual.NewSubsystemOutletNodeNamePrefix))
                 {
                     string name = tb.Text.Substring(NodeVisual.NewSubsystemOutletNodeNamePrefix.Length).Trim();
-                    if (name == "" || this.MainGraph.Nodes.Any(x => x.Name == NodeVisual.NewSubsystemOutletNodeNamePrefix + " " + name))
+                    if (name == "" || this.MainGraph.NodesTyped.Any(x => x.Name == NodeVisual.NewSubsystemOutletNodeNamePrefix + " " + name))
                     {
                         return;
                     }
@@ -579,10 +593,10 @@ namespace NodeEditor
 
             if (e.Button == MouseButtons.Right)
             {
-                var node = MainGraph.Nodes.OrderByDescending(x => x.BoundingBox.LeftTop).FirstOrDefault(
+                var node = MainGraph.NodesTyped.OrderByDescending(x => x.BoundingBox.LeftTop).FirstOrDefault(
                         x => new RectangleF(new PointF(x.X, x.Y), x.GetNodeBounds()).Contains(e.Location));
 
-                if (node != null || MainGraph.Nodes.Exists(x => x.IsSelected))
+                if (node != null || MainGraph.NodesTyped.Any(x => x.IsSelected))
                 {
                     var context = new ContextMenuStrip();
 
@@ -601,9 +615,9 @@ namespace NodeEditor
                         ChangeSelectedNodesColor(node);
                     }));
 
-                    if (MainGraph.Nodes.Count(x => x.IsSelected) == 2)
+                    if (MainGraph.NodesTyped.Count(x => x.IsSelected) == 2)
                     {
-                        var sel = MainGraph.Nodes.Where(x => x.IsSelected).ToArray();
+                        var sel = MainGraph.NodesTyped.Where(x => x.IsSelected).ToArray();
                         context.Items.Add("Check Impact ???", null, ((o, args) =>
                         {
                             if (HasImpact(sel[0], sel[1]) || HasImpact(sel[1], sel[0]))
@@ -619,7 +633,7 @@ namespace NodeEditor
 
                     context.Show(MousePosition);
                 }
-                else if (MainGraph.Connections.Any(x => x.IsHover))
+                else if (MainGraph.EdgesTyped.Any(x => x.IsHover))
                 {
                     var context = new ContextMenuStrip();
 
@@ -635,7 +649,7 @@ namespace NodeEditor
 
         private void ChangeSelectedNodesColor(NodeVisual node)
         {
-            NodeVisual[] selected = MainGraph.Nodes.Where(x => x.IsSelected).Concat(new[] { node }).Where(x => x != null).ToArray();
+            NodeVisual[] selected = MainGraph.NodesTyped.Where(x => x.IsSelected).Concat(new[] { node }).Where(x => x != null).ToArray();
 
             ColorDialog cd = new ColorDialog();
             cd.FullOpen = true;
@@ -652,9 +666,12 @@ namespace NodeEditor
 
         private void DuplicateSelectedNodes(NodeVisual node)
         {
-            NodeVisual[] selected = MainGraph.Nodes.Where(x => x.IsSelected).Concat(new[] { node }).Where(x => x != null).ToArray();
+            NodeVisual[] selected = MainGraph.NodesTyped.Where(x => x.IsSelected).Concat(new[] { node }).Where(x => x != null).ToArray();
+            foreach (NodeVisual n in MainGraph.Nodes)
+            {
+                n.IsSelected = false;
+            }
 
-            var cloned = new List<NodeVisual>();
             foreach (var n in selected)
             {
                 int count = selected.Length;
@@ -668,40 +685,38 @@ namespace NodeEditor
                 var clone = NodesGraph.DeserializeNode(br, this.Context).Item1;
                 clone.BoundaryCurve.Translate(new Microsoft.Msagl.Core.Geometry.Point(40, 40));
                 clone.GUID = Guid.NewGuid().ToString();
-                cloned.Add(clone);
+                clone.IsSelected = true;
+                clone.CustomEditor?.BringToFront();
+                MainGraph.Nodes.Add(clone);
                 br.Dispose();
                 bw.Dispose();
                 ms.Dispose();
             }
 
-            MainGraph.Nodes.ForEach(x => x.IsSelected = false);
-            cloned.ForEach(x => x.IsSelected = true);
-            cloned.Where(x => x.CustomEditor != null).ToList().ForEach(x => x.CustomEditor.BringToFront());
-            MainGraph.Nodes.AddRange(cloned);
             Invalidate();
         }
 
         private void DeleteSelectedNodes(NodeVisual node)
         {
-            NodeVisual[] selected = MainGraph.Nodes.Where(x => x.IsSelected).Concat(new[] { node }).Where(x => x != null).ToArray();
+            NodeVisual[] selected = MainGraph.NodesTyped.Where(x => x.IsSelected).Concat(new[] { node }).Where(x => x != null).ToArray();
 
             if (selected.Length > 0)
             {
                 if (selected.Length == 1)
                 {
                     NodeVisual sNode = selected[0];
-                    if (MainGraph.Connections.Count(x => x.InputNode == sNode) == 1
-                        && MainGraph.Connections.Count(x => x.OutputNode == sNode) == 1)
+                    if (MainGraph.EdgesTyped.Count(x => x.InputNode == sNode) == 1
+                        && MainGraph.EdgesTyped.Count(x => x.OutputNode == sNode) == 1)
                     {
                         var s = sNode.GetSockets();
-                        NodeConnection? inCon = MainGraph.Connections.FirstOrDefault(x => x.InputSocket == s.Inputs.First());
-                        NodeConnection? outCon = MainGraph.Connections.FirstOrDefault(x => x.OutputSocket == s.Outputs.First());
+                        NodeConnection? inCon = MainGraph.EdgesTyped.FirstOrDefault(x => x.InputSocket == s.Inputs.First());
+                        NodeConnection? outCon = MainGraph.EdgesTyped.FirstOrDefault(x => x.OutputSocket == s.Outputs.First());
 
                         if (inCon is not null
                             && outCon is not null 
                             && IsConnectable(inCon.OutputSocket, outCon.InputSocket))
                         {
-                            MainGraph.Connections.Add(new NodeConnection(inCon.OutputNode, inCon.OutputSocketName, outCon.InputNode, outCon.InputSocketName));
+                            MainGraph.AddEdge(new NodeConnection(inCon.OutputNode, inCon.OutputSocketName, outCon.InputNode, outCon.InputSocketName));
                         }
                     }
                 }
@@ -709,11 +724,13 @@ namespace NodeEditor
                 foreach (var n in selected)
                 {
                     Controls.Remove(n.CustomEditor);
-                    MainGraph.Connections.RemoveAll(
-                        x => x.OutputNode == n || x.InputNode == n);
+                    foreach(NodeConnection e in MainGraph.EdgesTyped.Where(x => x.OutputNode == n || x.InputNode == n).ToArray())
+                    {
+                        MainGraph.RemoveEdge(e);
+                    }
                 }
 
-                MainGraph.Nodes.RemoveAll(x => selected.Contains(x));
+                MainGraph.Nodes = MainGraph.Nodes.Except(selected).ToList();
             }
 
             Invalidate();
@@ -721,14 +738,26 @@ namespace NodeEditor
 
         private void DeleteHoveredConns()
         {
-            NodeConnection[] selected = MainGraph.Connections.Where(x => x.IsHover).ToArray();
-
-            if (selected.Length > 0)
+            foreach (NodeConnection e in MainGraph.EdgesTyped.Where(x => x.IsHover).ToArray())
             {
-                MainGraph.Connections.RemoveAll(x => selected.Contains(x));
+                MainGraph.RemoveEdge(e);
             }
 
             Invalidate();
+        }
+
+        public void ToggleEdgeRouting()
+        {
+            this.EdgeRoutingEnabled = !this.EdgeRoutingEnabled;
+            if (!EdgeRoutingEnabled)
+            {
+                foreach (NodeConnection c in this.MainGraph.EdgesTyped)
+                {
+                    c.Curve = null;
+                }
+            }
+
+            this.needRepaint = true;
         }
 
         public void ToggleRunMode()
@@ -739,7 +768,7 @@ namespace NodeEditor
             this.needRepaint = true;
 
             Stack<NodeVisual> nodeQueue = new Stack<NodeVisual>();
-            foreach(NodeVisual node in MainGraph.Nodes.Reverse<NodeVisual>())
+            foreach(NodeVisual node in MainGraph.NodesTyped.Reverse<NodeVisual>())
             {
                 if (node.InvokeOnLoad)
                 {
@@ -783,7 +812,7 @@ namespace NodeEditor
                     init.Feedback = FeedbackType.Error;
                 }
 
-                foreach (var connection in MainGraph.Connections)
+                foreach (var connection in MainGraph.EdgesTyped)
                 {
                     if (connection.OutputNode != init)
                     {
@@ -793,13 +822,13 @@ namespace NodeEditor
                     connection.PropagateValue(Context, this.Animate);
                 }
 
-                foreach (var connection in MainGraph.Connections.Where(x => x.OutputNode == init && x.OutputSocket.Value != null))
+                foreach (var connection in MainGraph.EdgesTyped.Where(x => x.OutputNode == init && x.OutputSocket.Value != null))
                 {
                     if (connection.InputSocket.HotInput)
                     {
                         if (connection.InputNode.Type == NodeVisual.NodeType.Subsystem)
                         {
-                            NodeVisual inlet = connection.InputNode.SubsystemGraph.Nodes.Single(x => x.Name == connection.InputSocketName);
+                            NodeVisual inlet = connection.InputNode.SubsystemGraph.NodesTyped.Single(x => x.Name == connection.InputSocketName);
                             inlet.GetSockets().Outputs.Single().Value = connection.InputSocket.Value;
                             nodeQueue.Push(inlet);
                         }
@@ -822,7 +851,7 @@ namespace NodeEditor
 
         public bool HasImpact(NodeVisual startNode, NodeVisual endNode)
         {
-            var connections = MainGraph.Connections.Where(x => x.OutputNode == startNode);
+            var connections = MainGraph.EdgesTyped.Where(x => x.OutputNode == startNode);
             foreach (var connection in connections)
             {
                 if(connection.InputNode == endNode)
