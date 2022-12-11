@@ -18,6 +18,7 @@
 using AnimateForms.Core;
 using Microsoft.Msagl.Core.Layout;
 using Microsoft.Msagl.Layout.LargeGraphLayout;
+using Microsoft.Msagl.Routing.Rectilinear;
 using Supercluster.KDTree;
 using System.Drawing.Drawing2D; 
 using Label = System.Windows.Forms.Label;
@@ -317,19 +318,30 @@ namespace NodeEditor
 
         internal void RouteEdges()
         {
-            var rectRouter = new Microsoft.Msagl.Routing.Rectilinear.RectilinearEdgeRouter(this, 3, 3, true);
+            //RectilinearInteractiveEditor.CreatePortsAndRouteEdges(3, 1, this.Nodes, this.Edges, Microsoft.Msagl.Core.Routing.EdgeRoutingMode.Rectilinear, true, true);
+
+            foreach(Edge e in this.Edges)
+            {
+                e.EdgeGeometry.Waypoints = new []
+                {
+                    e.EdgeGeometry.SourcePort.Location + new Microsoft.Msagl.Core.Geometry.Point(SocketVisual.SocketWidth / 2, -1),
+                    e.EdgeGeometry.TargetPort.Location + new Microsoft.Msagl.Core.Geometry.Point(SocketVisual.SocketWidth / 2, 1),
+                };
+            }
+
+            var rectRouter = new RectilinearEdgeRouter(this, 3, 2, true);
             rectRouter.Run();
 
-            //var portRouter = new Microsoft.Msagl.Routing.InteractiveEdgeRouter(this.Nodes.Select(n => n.BoundaryCurve), 3, 0.65 * 3, 0);
-            //portRouter.Run();
 
             // var router = new SplineRouter(graph, 3, 3, Math.PI / 6, new BundlingSettings());
             // router.Run();
 
-            // Partial
-            //foreach(var e in this.Edges)
+            //var nodes = this.Nodes.Select(n => n.BoundaryCurve).ToArray();
+            //var portRouter = new Microsoft.Msagl.Routing.InteractiveEdgeRouter(nodes, 3, 3, 1);
+            //portRouter.Run();
+            //foreach(var e in this.Edges.ToArray())
             //{
-            //    DrawEdgeWithPort(e, portRouter, 0.3, 0.4);
+            //    DrawEdgeWithPort(e, portRouter, 2.5, 0.5);
             //}
 
             void DrawEdgeWithPort(Edge edge, Microsoft.Msagl.Routing.InteractiveEdgeRouter portRouter, double par0, double par1)
