@@ -32,15 +32,7 @@ namespace MathSample
 
         private void FormMathSample_Load(object sender, EventArgs e)
         {
-            //Context assignment
-            controlNodeEditor.nodesControl.Context = context;
-            controlNodeEditor.nodesControl.OnNodeSelected += NodesControlOnOnNodeContextSelected; 
-            
-            //Loading sample from file
-            controlNodeEditor.nodesControl.MainGraph = mainGraph;
-            controlNodeEditor.nodesControl.Controls.Clear();
-            controlNodeEditor.nodesControl.Controls.AddRange(mainGraph.NodesTyped.Where(x => x.CustomEditor != null).Select(x => x.CustomEditor).ToArray());
-            controlNodeEditor.nodesControl.Refresh();
+            controlNodeEditor.nodesControl.Initialize(context, mainGraph);
 
             controlNodeEditor.nodesControl.OnSubgraphOpenRequest += NodesControl_OnSubgraphOpenRequest;
         }
@@ -49,14 +41,6 @@ namespace MathSample
         {
             FormMathSample newForm = new FormMathSample(this.context, obj.SubsystemGraph, obj);
             newForm.Show();
-        }
-
-        private void NodesControlOnOnNodeContextSelected(NodeVisual o)
-        {
-            if (controlNodeEditor.nodesControl.IsRunMode && o.IsInteractive)
-            {
-                controlNodeEditor.nodesControl.Execute(new Stack<NodeVisual>(new[]{ o }));
-            }
         }
 
         private void FormMathSample_Shown(object sender, EventArgs e)

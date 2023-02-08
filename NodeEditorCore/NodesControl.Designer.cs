@@ -32,17 +32,20 @@
             // 
             // NodesControl
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.DoubleBuffered = true;
+            this.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
             this.Name = "NodesControl";
-            this.Size = new System.Drawing.Size(574, 401);
-            this.Paint += new System.Windows.Forms.PaintEventHandler(this.NodesControl_Paint);
-            this.MouseClick += new System.Windows.Forms.MouseEventHandler(this.NodesControl_MouseClick);
-            this.MouseDown += new System.Windows.Forms.MouseEventHandler(this.NodesControl_MouseDown);
-            this.MouseMove += new System.Windows.Forms.MouseEventHandler(this.NodesControl_MouseMove);
-            this.MouseUp += new System.Windows.Forms.MouseEventHandler(this.NodesControl_MouseUp);
-            this.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.NodesControl_DoubleMouseClick);
+            this.Size = new System.Drawing.Size(670, 463);
+            this.VisibleChanged += new System.EventHandler(this.OnNodesControl_VisibleChanged);
+            this.Paint += new System.Windows.Forms.PaintEventHandler(this.OnNodesControl_Paint);
+            this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.OnNodesControl_KeyDown);
+            this.MouseClick += new System.Windows.Forms.MouseEventHandler(this.OnNodesControl_MouseClick);
+            this.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.OnNodesControl_DoubleMouseClick);
+            this.MouseDown += new System.Windows.Forms.MouseEventHandler(this.OnNodesControl_MouseDown);
+            this.MouseMove += new System.Windows.Forms.MouseEventHandler(this.OnNodesControl_MouseMove);
+            this.MouseUp += new System.Windows.Forms.MouseEventHandler(this.OnNodesControl_MouseUp);
             this.ResumeLayout(false);
 
         }

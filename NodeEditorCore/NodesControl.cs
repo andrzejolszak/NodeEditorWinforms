@@ -39,7 +39,7 @@ namespace NodeEditor
     /// </summary>
     public partial class NodesControl : UserControl
     {
-        public NodesGraph MainGraph { get; set; } = new NodesGraph();
+        public NodesGraph MainGraph { get; private set; }
         public readonly Animate Animate = new Animate();
         private bool needRepaint = true;
         private Timer timer = new Timer();
@@ -57,7 +57,7 @@ namespace NodeEditor
         public INodesContext Context
         {
             get { return context; }
-            set
+            private set
             {
                 if (context != null)
                 {
@@ -106,18 +106,20 @@ namespace NodeEditor
         /// <summary>
         /// Default constructor
         /// </summary>
-        public NodesControl()
+        public NodesControl(Image? backgroundImage = null)
         {
             InitializeComponent();
             timer.Interval = 30;
             timer.Tick += TimerOnTick;
             timer.Start();
-
-            KeyDown += OnKeyDown;
-            
+           
             SetStyle(ControlStyles.Selectable, true);
 
             this.Cursor = this.IsRunMode ? Cursors.Default : Cursors.Hand;
+
+            this.BackgroundImage = backgroundImage;
+
+            this.OnNodeSelected += OnNodeContextSelected;
         }
 
         private void ContextOnFeedbackInfo(string message, NodeVisual nodeVisual, FeedbackType type, object tag, bool breakExecution)
@@ -139,16 +141,7 @@ namespace NodeEditor
             base.WndProc(ref m);
         }
 
-        private void OnKeyDown(object sender, KeyEventArgs keyEventArgs)
-        {
-            if (keyEventArgs.KeyCode == Keys.Delete)
-            {
-                DeleteSelectedNodes(null);
-                DeleteHoveredConns();
-            }
-        }
-
-        private void TimerOnTick(object sender, EventArgs eventArgs)
+        public void TimerOnTick(object sender, EventArgs eventArgs)
         {
             if (DesignMode) return;
 
@@ -158,7 +151,7 @@ namespace NodeEditor
             }
         }
 
-        private void NodesControl_Paint(object sender, PaintEventArgs e)
+        public void OnNodesControl_Paint(object sender, PaintEventArgs e)
         {
             e.Graphics.SmoothingMode = SmoothingMode.HighQuality;
             e.Graphics.InterpolationMode = InterpolationMode.HighQualityBilinear;
@@ -195,7 +188,7 @@ namespace NodeEditor
             return new RectangleF(Math.Min(x1, x2), Math.Min(y1, y2), Math.Abs(x2 - x1), Math.Abs(y2 - y1));
         }
 
-        private void NodesControl_MouseMove(object sender, MouseEventArgs e)
+        public void OnNodesControl_MouseMove(object sender, MouseEventArgs e)
         {
             var em = PointToScreen(e.Location);
             if (selectionStart != PointF.Empty)
@@ -251,7 +244,7 @@ namespace NodeEditor
             needRepaint = true;
         }
 
-        private void NodesControl_MouseDown(object sender, MouseEventArgs e)
+        public void OnNodesControl_MouseDown(object sender, MouseEventArgs e)
         {                        
             if (e.Button == MouseButtons.Left)
             {
@@ -377,7 +370,7 @@ namespace NodeEditor
             return AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(x => x.FullName == assemblyName.FullName);
         }
 
-        private void NodesControl_MouseUp(object sender, MouseEventArgs e)
+        public void OnNodesControl_MouseUp(object sender, MouseEventArgs e)
         {
             if (!IsRunMode
                 && this.MainGraph.NodesTyped.Count(x => x.IsSelected) == 1
@@ -442,8 +435,10 @@ namespace NodeEditor
             needRepaint = true;
         }
 
-        private void NodesControl_DoubleMouseClick(object sender, MouseEventArgs e)
+        public void OnNodesControl_DoubleMouseClick(object sender, MouseEventArgs e)
         {
+            lastMouseLocation = e.Location;
+
             NodeVisual selectedNode = MainGraph.NodesTyped.FirstOrDefault(x => x.IsSelected);
             if (selectedNode?.SubsystemGraph != null)
             {
@@ -473,7 +468,7 @@ namespace NodeEditor
             {
                 if (ee.KeyChar == (char)Keys.Enter)
                 {
-                    SwapNode();
+                    SwapAutocompleteNode(tb, newAutocompleteNode);
                     ee.Handled = true;
                 }
             };
@@ -492,100 +487,100 @@ namespace NodeEditor
             Refresh();
             needRepaint = true;
             tb.Focus();
-
-            void SwapNode()
-            {
-                NodeVisual replacementNode = null;
-
-                if (tb.Text.StartsWith(NodeVisual.NewSubsystemNodeNamePrefix))
-                {
-                    string name = tb.Text.Substring(NodeVisual.NewSubsystemNodeNamePrefix.Length).Trim();
-                    if (name == "" || name == this.MainGraph.GUID)
-                    {
-                        return;
-                    }
-
-                    replacementNode = new NodeVisual(NodeVisual.NewSubsystemNodeNamePrefix + " " + name, newAutocompleteNode.X, newAutocompleteNode.Y)
-                    {
-                        SubsystemGraph = new NodesGraph() { GUID = name }
-                    };
-                    replacementNode.SubsystemGraph.OwnerNode = replacementNode;
-                    replacementNode.OwnerGraph = MainGraph;
-                }
-                else if (tb.Text.StartsWith(NodeVisual.NewSubsystemInletNodeNamePrefix))
-                {
-                    string name = tb.Text.Substring(NodeVisual.NewSubsystemInletNodeNamePrefix.Length).Trim();
-                    if (name == "" || this.MainGraph.NodesTyped.Any(x => x.Name == NodeVisual.NewSubsystemInletNodeNamePrefix + " " + name))
-                    {
-                        return;
-                    }
-
-                    replacementNode = new NodeVisual(NodeVisual.NewSubsystemInletNodeNamePrefix + " " + name, newAutocompleteNode.X, newAutocompleteNode.Y);
-                    replacementNode.OwnerGraph = MainGraph;
-                }
-                else if (tb.Text.StartsWith(NodeVisual.NewSubsystemOutletNodeNamePrefix))
-                {
-                    string name = tb.Text.Substring(NodeVisual.NewSubsystemOutletNodeNamePrefix.Length).Trim();
-                    if (name == "" || this.MainGraph.NodesTyped.Any(x => x.Name == NodeVisual.NewSubsystemOutletNodeNamePrefix + " " + name))
-                    {
-                        return;
-                    }
-
-                    replacementNode = new NodeVisual(NodeVisual.NewSubsystemOutletNodeNamePrefix + " " + name, newAutocompleteNode.X, newAutocompleteNode.Y);
-                    replacementNode.OwnerGraph = MainGraph;
-                }
-                else
-                {
-                    string name = tb.Text.Trim();
-                    var methods = Context.GetType().GetMethods();
-                    MethodInfo info = methods.SingleOrDefault(x => x.Name.Equals(name.Split(' ')[0], StringComparison.InvariantCultureIgnoreCase));
-                    if (info is null)
-                    {
-                        return;
-                    }
-
-                    NodeAttribute attrib = info.GetCustomAttributes(typeof(NodeAttribute), false)
-                        .Cast<NodeAttribute>()
-                        .FirstOrDefault();
-                    if (attrib is null)
-                    {
-                        return;
-                    }
-
-                    replacementNode = new NodeVisual(name, newAutocompleteNode.X, newAutocompleteNode.Y)
-                    {
-                        MethodInf = info,
-                        IsInteractive = attrib.IsInteractive,
-                        CustomWidth = attrib.Width,
-                        CustomHeight = attrib.Height,
-                        InvokeOnLoad = attrib.InvokeOnLoad,
-                        OwnerGraph = MainGraph
-                    };
-
-                    if (attrib.CustomEditor != null)
-                    {
-                        Control ctrl = null;
-                        replacementNode.CustomEditor = ctrl = Activator.CreateInstance(attrib.CustomEditor) as Control;
-                        if (ctrl != null)
-                        {
-                            ctrl.BackColor = newAutocompleteNode.NodeColor;
-                            Controls.Add(ctrl);
-                        }
-
-                        replacementNode.LayoutEditor();
-                    }
-                }
-
-                Controls.Remove(tb);
-                MainGraph.Nodes.Remove(newAutocompleteNode);
-                MainGraph.Nodes.Add(replacementNode);
-
-                Refresh();
-                needRepaint = true;
-            }
         }
 
-        private void NodesControl_MouseClick(object sender, MouseEventArgs e)
+        public void SwapAutocompleteNode(TextBox tb, NodeVisual newAutocompleteNode)
+        {
+            NodeVisual replacementNode = null;
+
+            if (tb.Text.StartsWith(NodeVisual.NewSubsystemNodeNamePrefix))
+            {
+                string name = tb.Text.Substring(NodeVisual.NewSubsystemNodeNamePrefix.Length).Trim();
+                if (name == "" || name == this.MainGraph.GUID)
+                {
+                    return;
+                }
+
+                replacementNode = new NodeVisual(NodeVisual.NewSubsystemNodeNamePrefix + " " + name, newAutocompleteNode.X, newAutocompleteNode.Y)
+                {
+                    SubsystemGraph = new NodesGraph() { GUID = name }
+                };
+                replacementNode.SubsystemGraph.OwnerNode = replacementNode;
+                replacementNode.OwnerGraph = MainGraph;
+            }
+            else if (tb.Text.StartsWith(NodeVisual.NewSubsystemInletNodeNamePrefix))
+            {
+                string name = tb.Text.Substring(NodeVisual.NewSubsystemInletNodeNamePrefix.Length).Trim();
+                if (name == "" || this.MainGraph.NodesTyped.Any(x => x.Name == NodeVisual.NewSubsystemInletNodeNamePrefix + " " + name))
+                {
+                    return;
+                }
+
+                replacementNode = new NodeVisual(NodeVisual.NewSubsystemInletNodeNamePrefix + " " + name, newAutocompleteNode.X, newAutocompleteNode.Y);
+                replacementNode.OwnerGraph = MainGraph;
+            }
+            else if (tb.Text.StartsWith(NodeVisual.NewSubsystemOutletNodeNamePrefix))
+            {
+                string name = tb.Text.Substring(NodeVisual.NewSubsystemOutletNodeNamePrefix.Length).Trim();
+                if (name == "" || this.MainGraph.NodesTyped.Any(x => x.Name == NodeVisual.NewSubsystemOutletNodeNamePrefix + " " + name))
+                {
+                    return;
+                }
+
+                replacementNode = new NodeVisual(NodeVisual.NewSubsystemOutletNodeNamePrefix + " " + name, newAutocompleteNode.X, newAutocompleteNode.Y);
+                replacementNode.OwnerGraph = MainGraph;
+            }
+            else
+            {
+                string name = tb.Text.Trim();
+                var methods = Context.GetType().GetMethods();
+                MethodInfo info = methods.SingleOrDefault(x => x.Name.Equals(name.Split(' ')[0], StringComparison.InvariantCultureIgnoreCase));
+                if (info is null)
+                {
+                    return;
+                }
+
+                NodeAttribute attrib = info.GetCustomAttributes(typeof(NodeAttribute), false)
+                    .Cast<NodeAttribute>()
+                    .FirstOrDefault();
+                if (attrib is null)
+                {
+                    return;
+                }
+
+                replacementNode = new NodeVisual(name, newAutocompleteNode.X, newAutocompleteNode.Y)
+                {
+                    MethodInf = info,
+                    IsInteractive = attrib.IsInteractive,
+                    CustomWidth = attrib.Width,
+                    CustomHeight = attrib.Height,
+                    InvokeOnLoad = attrib.InvokeOnLoad,
+                    OwnerGraph = MainGraph
+                };
+
+                if (attrib.CustomEditor != null)
+                {
+                    Control ctrl = null;
+                    replacementNode.CustomEditor = ctrl = Activator.CreateInstance(attrib.CustomEditor) as Control;
+                    if (ctrl != null)
+                    {
+                        ctrl.BackColor = newAutocompleteNode.NodeColor;
+                        Controls.Add(ctrl);
+                    }
+
+                    replacementNode.LayoutEditor();
+                }
+            }
+
+            Controls.Remove(tb);
+            MainGraph.Nodes.Remove(newAutocompleteNode);
+            MainGraph.Nodes.Add(replacementNode);
+
+            Refresh();
+            needRepaint = true;
+        }
+
+        public void OnNodesControl_MouseClick(object sender, MouseEventArgs e)
         {
             lastMouseLocation = e.Location;
 
@@ -746,7 +741,7 @@ namespace NodeEditor
             Invalidate();
         }
 
-        public void ToggleEdgeRouting()
+        private void ToggleEdgeRouting()
         {
             this.EdgeRoutingEnabled = !this.EdgeRoutingEnabled;
             if (!EdgeRoutingEnabled)
@@ -760,12 +755,17 @@ namespace NodeEditor
             this.needRepaint = true;
         }
 
-        public void ToggleRunMode()
+        private void ToggleRunMode()
         {
             this.IsRunMode = !this.IsRunMode;
             this.Cursor = this.IsRunMode ? Cursors.Default : Cursors.Hand;
 
             this.needRepaint = true;
+
+            if (!this.IsRunMode)
+            {
+                return;
+            }
 
             Stack<NodeVisual> nodeQueue = new Stack<NodeVisual>();
             foreach(NodeVisual node in MainGraph.NodesTyped.Reverse<NodeVisual>())
@@ -783,7 +783,7 @@ namespace NodeEditor
         /// Executes whole node graph (when called parameterless) or given node when specified.
         /// </summary>
         /// <param name="node"></param>
-        public void Execute(Stack<NodeVisual> queue)
+        private void Execute(Stack<NodeVisual> queue)
         {
             var nodeQueue = queue;
             while (nodeQueue.Count > 0)
@@ -849,7 +849,7 @@ namespace NodeEditor
             }
         }
 
-        public bool HasImpact(NodeVisual startNode, NodeVisual endNode)
+        private bool HasImpact(NodeVisual startNode, NodeVisual endNode)
         {
             var connections = MainGraph.EdgesTyped.Where(x => x.OutputNode == startNode);
             foreach (var connection in connections)
@@ -866,6 +866,49 @@ namespace NodeEditor
             }
 
             return false;
+        }
+
+        public void OnNodesControl_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Delete)
+            {
+                DeleteSelectedNodes(null);
+                DeleteHoveredConns();
+            }
+
+            if (e.Control && e.KeyCode == Keys.E)
+            {
+                this.ToggleRunMode();
+            }
+
+            if (e.Control && e.KeyCode == Keys.R)
+            {
+                this.ToggleEdgeRouting();
+            }
+        }
+
+        public void OnNodesControl_VisibleChanged(object sender, EventArgs e)
+        {
+            if (!this.Visible)
+            {
+            }
+        }
+
+        private void OnNodeContextSelected(NodeVisual o)
+        {
+            if (this.IsRunMode && o.IsInteractive)
+            {
+                this.Execute(new Stack<NodeVisual>(new[] { o }));
+            }
+        }
+
+        public void Initialize(INodesContext context, NodesGraph mainGraph)
+        {
+            this.Context = context;
+            this.MainGraph = mainGraph;
+            this.Controls.Clear();
+            this.Controls.AddRange(mainGraph.NodesTyped.Where(x => x.CustomEditor != null).Select(x => x.CustomEditor).ToArray());
+            this.Refresh();
         }
     }
 

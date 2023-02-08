@@ -15,18 +15,5 @@ namespace SampleCommon
         {
             InitializeComponent();
         }
-
-        private void nodesControl_KeyDown(object sender, KeyEventArgs e)
-        {
-            if (e.Control && e.KeyCode == Keys.E)
-            {
-                nodesControl.ToggleRunMode();
-            }
-
-            if (e.Control && e.KeyCode == Keys.R)
-            {
-                nodesControl.ToggleEdgeRouting();
-            }
-        }
     }
 }

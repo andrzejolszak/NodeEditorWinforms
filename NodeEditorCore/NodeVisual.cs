@@ -119,7 +119,7 @@ namespace NodeEditor
             this._allSocketsOrdered = null;
         }
 
-        internal (List<SocketVisual> Inputs, List<SocketVisual> Outputs, List<SocketVisual> All) GetSockets()
+        public (List<SocketVisual> Inputs, List<SocketVisual> Outputs, List<SocketVisual> All) GetSockets()
         {
             if(_allSocketsOrdered != null)
             {

@@ -31,7 +31,7 @@ namespace SampleCommon
         private void InitializeComponent()
         {
             this.panel = new System.Windows.Forms.Panel();
-            this.nodesControl = new NodeEditor.NodesControl();
+            this.nodesControl = new NodeEditor.NodesControl(Image.FromFile(".\\Resources\\grid.png"));
             this.panel.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -47,13 +47,10 @@ namespace SampleCommon
             // 
             // nodesControl
             // 
-            this.nodesControl.BackgroundImage = Image.FromFile(".\\Resources\\grid.png");
-            this.nodesControl.Context = null;
             this.nodesControl.Location = new System.Drawing.Point(0, 0);
             this.nodesControl.Name = "nodesControl";
             this.nodesControl.Size = new System.Drawing.Size(5000, 5000);
             this.nodesControl.TabIndex = 0;
-            this.nodesControl.KeyDown += new System.Windows.Forms.KeyEventHandler(this.nodesControl_KeyDown);
             // 
             // ControlNodeEditor
             // 
