@@ -16,15 +16,15 @@ namespace MathSample
         [STAThread]
         static void Main()
         {
-            Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
+            System.Windows.Forms.Application.EnableVisualStyles();
+            System.Windows.Forms.Application.SetCompatibleTextRenderingDefault(false);
 
             MathContext context = new MathContext();
             NodesGraph[] graphs = NodesGraph.Deserialize(File.ReadAllBytes("..\\..\\..\\default.nds"), context);
             FormMathSample gui = new FormMathSample(context, graphs[0], null);
             gui.FormClosing += (e, s) => File.WriteAllBytes("..\\..\\..\\default.nds", NodesGraph.Serialize(gui.mainGraph));
 
-            Application.Run(gui);
+            System.Windows.Forms.Application.Run(gui);
         }
     }
 }

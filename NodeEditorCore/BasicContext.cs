@@ -1,4 +1,5 @@
-﻿namespace NodeEditor
+﻿
+namespace NodeEditor
 {
     public class BasicContext : INodesContext
     {

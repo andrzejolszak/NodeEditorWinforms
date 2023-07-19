@@ -18,14 +18,8 @@
 using AnimateForms.Core;
 using Microsoft.Msagl.Core.Geometry.Curves;
 using Microsoft.Msagl.Core.Layout;
-using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
-using System.Net.Sockets;
 using System.Reflection;
-using System.Windows.Forms;
-using System.Xml.Linq;
+using RoundedRect = Microsoft.Msagl.Core.Geometry.Curves.RoundedRect;
 
 namespace NodeEditor
 {
@@ -61,8 +55,11 @@ namespace NodeEditor
         public bool InvokeOnLoad { get; set; }
         public FeedbackType Feedback { get; set; }
         public Control CustomEditor { get; internal set; }
+        public Avalonia.Controls.Control CustomEditorAv { get; internal set; }
         public string GUID = Guid.NewGuid().ToString();
         public Color NodeColor = Color.FromArgb(0xFF, 0xF8, 0xF8, 0xFF);
+        public Avalonia.Media.Color NodeColorAv = Avalonia.Media.Color.FromArgb(0xFF, 0xF8, 0xF8, 0xFF);
+
         private List<SocketVisual> _inputSocketsCache;
         private List<SocketVisual> _outputSocketsCache;
         private List<SocketVisual> _allSocketsOrdered;
@@ -290,6 +287,11 @@ namespace NodeEditor
                 csize = new SizeF(CustomEditor.ClientSize.Width, CustomEditor.ClientSize.Height + HeaderHeight + 8 + SocketVisual.SocketHeight);                
             }
 
+            if (CustomEditorAv != null && CustomEditorAv.Bounds != default && this.Name != NewSpecialNodeName)
+            {
+                csize = new SizeF((float)CustomEditorAv.Bounds.Width, (float)(CustomEditorAv.Bounds.Height + HeaderHeight + 8 + SocketVisual.SocketHeight));
+            }
+
             var h = HeaderHeight;
 
             csize.Width = Math.Max(csize.Width, NodeWidth);
@@ -375,6 +377,62 @@ namespace NodeEditor
             }
         }
 
+        public void DrawAv(DrawingContext g, PointerPoint mouse, bool isRunMode)
+        {
+            var rect = new Rect(new Avalonia.Point((float)X, (float)Y), GetNodeBounds().ToAvSize());
+            
+            // Draw shadow
+            bool isHover = rect.Contains(mouse.Position);
+            g.FillRectangle(Avalonia.Media.Brushes.DarkGray, rect.Translate(isHover ? new Vector(6, 6) : new Vector(4, 4)));
+            
+            var feedrect = rect;
+            feedrect.Inflate(10);
+            
+            if (Feedback == FeedbackType.Warning)
+            {
+                g.DrawRectangle(new Avalonia.Media.Pen(Avalonia.Media.Brushes.Yellow, 3), feedrect);
+            }
+            else if (Feedback == FeedbackType.Error)
+            {
+                g.DrawRectangle(new Avalonia.Media.Pen(Avalonia.Media.Brushes.Red, 3), feedrect);
+            }
+            
+            Avalonia.Media.Color fillColor = NodeColorAv;
+            
+            if (IsSelected && !isRunMode)
+            {
+                fillColor = Avalonia.Media.Colors.PaleGoldenrod;
+            }
+            
+            g.FillRectangle(new Avalonia.Media.SolidColorBrush(fillColor), rect);
+
+            if (this.CustomEditorAv != null && this.CustomEditorAv[Avalonia.Controls.TextBlock.BackgroundProperty] is SolidColorBrush b &&
+                (b.Color == NodeColorAv || b.Color == Avalonia.Media.Colors.White || b.Color == Avalonia.Media.Colors.PaleGoldenrod))
+            {
+                // TODO: shaky
+                this.CustomEditorAv[Avalonia.Controls.TextBlock.BackgroundProperty] = new Avalonia.Media.SolidColorBrush(fillColor);
+            }
+            
+            // TODO: removed rounding
+            g.DrawRectangle(AvaloniaUtils.BlackPen1, rect);
+            
+            if (this.IsInteractive)
+            {
+                g.DrawLine(AvaloniaUtils.BlackPen1, new Avalonia.Point(rect.X + rect.Width - 5, rect.Y), new Avalonia.Point(rect.X + rect.Width - 5, rect.Y + rect.Height));
+            }
+            
+            if (this.Name != NewSpecialNodeName)
+            {
+                FormattedText formattedText = new FormattedText(Name, CultureInfo.InvariantCulture, Avalonia.Media.FlowDirection.LeftToRight, AvaloniaUtils.FontMonospaceNormal, 9, Avalonia.Media.Brushes.Black);
+                g.DrawText(formattedText, new Avalonia.Point((float)this.X + 3, (float)this.Y + HeaderHeight / 4));
+            }
+            
+            foreach (var socet in GetSockets().All)
+            {
+                socet.DrawAv(g, mouse);
+            }
+        }
+
         public void Execute(INodesContext context, Animate animate)
         {
             context.CurrentProcessingNode = this;
@@ -426,6 +484,19 @@ namespace NodeEditor
                 else
                 {
                     CustomEditor.Location = new Point((int)(this.X + 4), (int)(this.Y + HeaderHeight + 4));
+                }
+            }
+
+            if (CustomEditorAv != null)
+            {
+                if (this.Name == NewSpecialNodeName)
+                {
+                    // TODO: likely wrong
+                    CustomEditorAv.RenderTransformOrigin = new RelativePoint(4, 8, RelativeUnit.Relative);
+                }
+                else
+                {
+                    CustomEditorAv.RenderTransformOrigin = new RelativePoint(4, HeaderHeight + 4, RelativeUnit.Relative);
                 }
             }
         }

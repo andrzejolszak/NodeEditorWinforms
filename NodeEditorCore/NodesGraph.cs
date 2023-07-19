@@ -17,11 +17,9 @@
 
 using AnimateForms.Core;
 using Microsoft.Msagl.Core.Layout;
-using Microsoft.Msagl.Layout.LargeGraphLayout;
 using Microsoft.Msagl.Routing.Rectilinear;
 using Supercluster.KDTree;
-using System.Drawing.Drawing2D; 
-using Label = System.Windows.Forms.Label;
+using System.Drawing.Drawing2D;
 
 namespace NodeEditor
 {
@@ -31,6 +29,7 @@ namespace NodeEditor
         private const int HoverThrottlingMs = 10;
         internal KDTree<float, NodeConnection> KdTree = null;
         private List<(NodeConnection, PointF[])> _points = new List<(NodeConnection, PointF[])>();
+        private List<(NodeConnection, Avalonia.Point[])> _pointsAv = new List<(NodeConnection, Avalonia.Point[])>();
         private float _pointsChecksum = 0;
         private bool _treeRecalc = false;
         private bool _hoverRecalc = false;
@@ -98,6 +97,65 @@ namespace NodeEditor
 
                     Task.Delay(HoverThrottlingMs);
 
+                    _treeRecalc = false;
+                });
+            }
+        }
+
+        public void DrawAv(DrawingContext g, PointerPoint mouse, bool isRunMode, Animate animate, double width, double height)
+        {           
+            // TODO: no clip bounds
+            g.FillRectangle(new SolidColorBrush(Avalonia.Media.Color.FromArgb(220, 255, 255, 255)), new Rect(0,0, width, height));
+            
+            var orderedNodes = Nodes.OrderBy(x => x.BoundingBox.LeftTop);
+            foreach (var node in orderedNodes)
+            {
+                (node as NodeVisual).DrawAv(g, mouse, isRunMode);
+            }
+            
+            if (KdTree != null && !_hoverRecalc)
+            {
+                _hoverRecalc = true;
+                Task.Run(() =>
+                {
+                    _hoverConnection = KdTree.RadialSearch(new float[] { (float)mouse.Position.X, (float)mouse.Position.Y }, 50, 1).FirstOrDefault()?.Item2;
+                    Task.Delay(HoverThrottlingMs);
+                    _hoverRecalc = false;
+                });
+            }
+
+            _pointsAv.Clear();
+            
+            foreach (NodeConnection connection in this.Edges)
+            {
+                bool isHover = connection == _hoverConnection;
+                Avalonia.Point[] points = connection.DrawAv(g, isHover, isRunMode, animate);
+                _pointsAv.Add((connection, points));
+            }
+            
+            float newChecksum = this._pointsAv.SelectMany(x => x.Item2).Sum(x => (float)x.X);
+            if (newChecksum != _pointsChecksum && !_treeRecalc)
+            {
+                _treeRecalc = true;
+                _pointsChecksum = newChecksum;
+                Task.Run(() =>
+                {
+                    (NodeConnection, Avalonia.Point[])[] pointsCopy = _pointsAv.ToArray();
+                    float[][] points = pointsCopy.SelectMany(x => x.Item2.Select(y => (x.Item1, new float[] { (float)y.X, (float)y.Y }))).Select(x => x.Item2).ToArray();
+                    NodeConnection[] conns = pointsCopy.SelectMany(x => x.Item2.Select(y => (x.Item1, new float[] { (float)y.X, (float)y.Y }))).Select(x => x.Item1).ToArray();
+                    KdTree = new KDTree<float, NodeConnection>(2, points, conns, (x, y) =>
+                    {
+                        float dist = 0f;
+                        for (int i = 0; i < x.Length; i++)
+                        {
+                            dist += (x[i] - y[i]) * (x[i] - y[i]);
+                        }
+            
+                        return dist;
+                    });
+            
+                    Task.Delay(HoverThrottlingMs);
+            
                     _treeRecalc = false;
                 });
             }

@@ -1,5 +1,4 @@
-﻿using System.Windows.Forms;
-using static AnimateForms.Core.Animate;
+﻿using static AnimateForms.Core.Animate;
 using static AnimateForms.Core.Easings;
 
 namespace AnimateForms.Core

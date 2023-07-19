@@ -15,11 +15,6 @@
  * OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
 namespace NodeEditor
 {
     /// <summary>
@@ -37,5 +32,10 @@ namespace NodeEditor
         /// to the nodes graph. (Message, Related Node, Feedback Type, Tag - Anything, BreakExecution)
         /// </summary>
         event Action<string, NodeVisual, FeedbackType, object, bool> FeedbackInfo;
+    }
+
+    public class Bang
+    {
+        public static Bang Instance = new Bang();
     }
 }

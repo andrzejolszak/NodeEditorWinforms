@@ -9,22 +9,23 @@
 
   <ItemGroup>
     <PackageReference Include="AutomaticGraphLayout" Version="1.1.12" />
+    <PackageReference Include="Avalonia" Version="11.0.0" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.0.0" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.0.0" />
+    <PackageReference Include="NXUI" Version="11.0.0" />
     <PackageReference Include="Supercluster.KDTree.Standard" Version="1.0.5" />
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Update="Autocomplete\AutocompleteListView.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
+    <Compile Update="Autocomplete\AutocompleteListView.cs" />
     <Compile Update="Autocomplete\AutocompleteMenu.cs">
       <SubType>Component</SubType>
     </Compile>
     <Compile Update="Autocomplete\AutocompleteMenuHost.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Update="NodesControl.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
+    <Compile Update="NodesControlAv.cs" />
+    <Compile Update="NodesControl.cs" />
   </ItemGroup>
 
 </Project>

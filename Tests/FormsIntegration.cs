@@ -6,6 +6,7 @@ using NUnit.Framework.Internal;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
+using Bitmap = System.Drawing.Bitmap;
 
 namespace Tests;
 

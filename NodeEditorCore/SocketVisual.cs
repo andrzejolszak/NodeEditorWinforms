@@ -17,10 +17,7 @@
 
 using Microsoft.Msagl.Core.Geometry.Curves;
 using Microsoft.Msagl.Core.Layout;
-using System;
-using System.Drawing;
 using System.Drawing.Drawing2D;
-using System.Windows.Forms;
 
 namespace NodeEditor
 {
@@ -104,6 +101,39 @@ namespace NodeEditor
         public RectangleF GetBounds()
         {
             return new RectangleF((float)this.Location.X, (float)this.Location.Y, Width, Height);
+        }
+
+        public void DrawAv(DrawingContext g, PointerPoint mouse)
+        {
+            float x = (float)this.Location.X;
+            float y = (float)this.Location.Y;
+
+            var socketRect = new Rect(x, y, Width, Height);
+            var hover = socketRect.Contains(mouse.Position);
+
+            if (hover)
+            {
+                socketRect.Inflate(new Thickness(2, 0));
+                if (Input)
+                {
+                    FormattedText formattedText = new FormattedText(Name + ":" + CurriedValue, CultureInfo.InvariantCulture, Avalonia.Media.FlowDirection.LeftToRight, AvaloniaUtils.FontMonospaceCondensed, 9, Avalonia.Media.Brushes.Blue);
+                    g.DrawText(formattedText, new Avalonia.Point(x, y - SocketHeight * 2));
+                }
+                else
+                {
+                    FormattedText formattedText = new FormattedText(Name + ":" + CurriedValue, CultureInfo.InvariantCulture, Avalonia.Media.FlowDirection.LeftToRight, AvaloniaUtils.FontMonospaceCondensed, 9, Avalonia.Media.Brushes.Blue);
+                    g.DrawText(formattedText, new Avalonia.Point(x, y + SocketHeight));
+                }
+            }
+
+            g.FillRectangle(this.CurriedValue == null ? Avalonia.Media.Brushes.DarkGray : Avalonia.Media.Brushes.Black, socketRect);
+            if (CurryDefault != null && Value == null)
+            {
+                g.FillRectangle(Avalonia.Media.Brushes.PaleGoldenrod, socketRect);
+            }
+
+            FormattedText ft = new FormattedText(Type.Name.Substring(0, 1).ToLowerInvariant(), CultureInfo.InvariantCulture, Avalonia.Media.FlowDirection.LeftToRight, AvaloniaUtils.FontMonospaceCondensed, 9, Avalonia.Media.Brushes.White);
+            g.DrawText(ft, new Avalonia.Point(x + 2, y - 6));
         }
     }
 }
