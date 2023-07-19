@@ -104,7 +104,6 @@ namespace NodeEditor
 
         public void DrawAv(DrawingContext g, PointerPoint mouse, bool isRunMode, Animate animate, double width, double height)
         {           
-            // TODO: no clip bounds
             g.FillRectangle(new SolidColorBrush(Avalonia.Media.Color.FromArgb(220, 255, 255, 255)), new Rect(0,0, width, height));
             
             var orderedNodes = Nodes.OrderBy(x => x.BoundingBox.LeftTop);

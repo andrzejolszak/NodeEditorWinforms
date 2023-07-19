@@ -92,22 +92,18 @@ namespace NodeEditor
 
         private bool breakExecution = false;        
 
+        public NodeVisual? Owner { get; }
+
         /// <summary>
         /// Default constructor
         /// </summary>
-        public NodesControlAv()
+        public NodesControlAv(NodeVisual? owner)
         {
-            // Winforms InitComponent
-            // this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
-            // this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            // this.DoubleBuffered = true;
-            // this.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
-            // this.Name = "NodesControl";
-            // this.Size = new System.Drawing.Size(670, 463);
+            this.Owner = owner;
             
             // TODO: will at least need to attach event handlers
-            // this.VisibleChanged += new System.EventHandler(this.OnNodesControl_VisibleChanged);
             // this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.OnNodesControl_KeyDown);
+            this.AttachedToVisualTree += this.OnNodesControl_VisibleChanged;
             this.PointerPressed += this.OnNodesControl_MousePressed;
             this.PointerMoved += this.OnNodesControl_MouseMove;
             this.PointerReleased += this.OnNodesControl_MouseUp;
@@ -135,12 +131,18 @@ namespace NodeEditor
         {
             if (needRepaint || this.Animate.AnimationUpdated)
             {
-                this.InvalidateVisual();
+                Dispatcher.UIThread.Invoke(this.InvalidateVisual);
             }
         }
 
         public override void Render(DrawingContext e)
         {
+            if (this.MainGraph is null)
+            {
+                base.Render(e);
+                return;
+            }
+
             // TODO: Avalonia deferred render?: https://github.com/AvaloniaUI/Avalonia/issues/5264
             if (this.EdgeRoutingEnabled)
             {
@@ -909,6 +911,10 @@ namespace NodeEditor
             // TODO:
             this.LogicalChildren.Clear();
             this.LogicalChildren.AddRange(mainGraph.NodesTyped.Where(x => x.CustomEditorAv != null).Select(x => x.CustomEditorAv).ToArray());
+
+            this.MinHeight= 600;
+            this.Bounds = new Avalonia.Rect(0, 0, 800, 600);
+
             this.InvalidateVisual();
         }
     }
