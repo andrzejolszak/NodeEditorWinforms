@@ -61,7 +61,8 @@ namespace MathSample
 
                 window.Closed += (e, s) =>
                 {
-                    File.WriteAllBytes("..\\..\\..\\default.nds", NodesGraph.Serialize(graphs[0]));
+                    File.WriteAllBytes("..\\..\\..\\default.nds", NodesGraph.Serialize(control.MainGraph));
+                    System.Windows.Forms.Application.Exit();
                 };
 
                 control.Unloaded += (e, s) =>

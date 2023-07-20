@@ -108,7 +108,7 @@ namespace NodeEditor
             float x = (float)this.Location.X;
             float y = (float)this.Location.Y;
 
-            var socketRect = new Rect(x, y, Width, Height);
+            var socketRect = new Rect(x, y, Width, Height).PixelAlign();
             var hover = socketRect.Contains(mouse.Position);
 
             if (hover)
@@ -133,7 +133,7 @@ namespace NodeEditor
             }
 
             FormattedText ft = new FormattedText(Type.Name.Substring(0, 1).ToLowerInvariant(), CultureInfo.InvariantCulture, Avalonia.Media.FlowDirection.LeftToRight, AvaloniaUtils.FontMonospaceCondensed, 9, Avalonia.Media.Brushes.White);
-            g.DrawText(ft, new Avalonia.Point(x + 2, y - 6));
+            g.DrawText(ft, new Avalonia.Point(x + Width/2 - ft.Width/2, y));
         }
     }
 }

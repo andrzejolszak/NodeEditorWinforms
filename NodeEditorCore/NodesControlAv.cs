@@ -154,13 +154,15 @@ namespace NodeEditor
 
             if (dragSocket != null)
             {
-                NodeConnection.DrawConnectionAv(e, AvaloniaUtils.BlackPen2, dragConnectionBegin, dragConnectionEnd);
+                NodeConnection.DrawDragConnectionAv(e, AvaloniaUtils.BlackPen1, dragConnectionBegin, dragConnectionEnd);
             }
 
             if (selectionStart != default)
             {                
                 e.DrawRectangle(new SolidColorBrush(Avalonia.Media.Colors.CornflowerBlue, 0.2), new Avalonia.Media.Pen(Avalonia.Media.Colors.DodgerBlue.ToUInt32()), MakeRect(selectionStart, selectionEnd ,true));
             }
+
+            e.DrawEllipse(new SolidColorBrush(Avalonia.Media.Colors.Pink, 0.5), null, new Rect(this._lastMouseState.Position.X-5, this._lastMouseState.Position.Y-5, 10, 10));
 
             needRepaint = false;
         }

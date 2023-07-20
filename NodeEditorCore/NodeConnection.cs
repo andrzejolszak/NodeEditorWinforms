@@ -335,12 +335,12 @@ namespace NodeEditor
             
             var beginSocket = this.OutputSocket.GetBounds().ToAvRect();
             var endSocket = this.InputSocket.GetBounds().ToAvRect();
-            var begin = beginSocket.Translate(new Avalonia.Vector(beginSocket.Width / 2f, beginSocket.Height));
-            var end = endSocket.Translate(new Avalonia.Vector(endSocket.Width / 2f, 0f));
+            var begin = beginSocket.Center.WithY(beginSocket.Y + beginSocket.Height);
+            var end = endSocket.Center.WithY(endSocket.Y);
             
             if (this.Curve is null)
             {
-                Avalonia.Point[] points = DrawConnectionAv(g, this.PenEmhemeralAv, begin.Center, end.Center);
+                Avalonia.Point[] points = DrawDragConnectionAv(g, this.PenEmhemeralAv, begin, end);
                 return points;
             }
             else
@@ -492,7 +492,7 @@ namespace NodeEditor
             }
         }
 
-        public static Avalonia.Point[] DrawConnectionAv(DrawingContext g,  Avalonia.Media.Pen pen, Avalonia.Point output, Avalonia.Point input)
+        public static Avalonia.Point[] DrawDragConnectionAv(DrawingContext g,  Avalonia.Media.Pen pen, Avalonia.Point output, Avalonia.Point input)
         {
            
             if (input == output)

@@ -16,7 +16,8 @@ global using ScrollEventType = System.Windows.Forms.ScrollEventType;
 global using TextBox = System.Windows.Forms.TextBox;
 global using Image = System.Drawing.Image;
 global using Brushes = System.Drawing.Brushes;
-
+using Avalonia;
+using AvaloniaEdit.Utils;
 
 public static class AvaloniaUtils
 {
@@ -31,4 +32,7 @@ public static class AvaloniaUtils
     public static Rect ToAvRect(this RectangleF self) => new Rect(self.X, self.Y, self.Width, self.Height);
     public static Avalonia.Size ToAvSize(this SizeF self) => new Avalonia.Size(self.Width, self.Height);
     public static Avalonia.Media.Color ToAvColor(this Color self) => new Avalonia.Media.Color(self.A, self.R, self.G, self.B);
+    public static Rect PixelAlign(this Rect self) => PixelSnapHelpers.PixelAlign(self, new Avalonia.Size(1, 1));
+    public static Avalonia.Point PixelAlign(this Avalonia.Point self) => new Avalonia.Point(PixelSnapHelpers.PixelAlign(self.X, 1), PixelSnapHelpers.PixelAlign(self.Y, 1));
+
 }

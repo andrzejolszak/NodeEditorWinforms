@@ -16,6 +16,9 @@
  */
 
 using AnimateForms.Core;
+using Avalonia.Media;
+using AvaloniaEdit.Rendering;
+using AvaloniaEdit.Utils;
 using Microsoft.Msagl.Core.Geometry.Curves;
 using Microsoft.Msagl.Core.Layout;
 using System.Reflection;
@@ -379,8 +382,8 @@ namespace NodeEditor
 
         public void DrawAv(DrawingContext g, PointerPoint mouse, bool isRunMode)
         {
-            var rect = new Rect(new Avalonia.Point((float)X, (float)Y), GetNodeBounds().ToAvSize());
-            
+            var rect = new Rect(new Avalonia.Point((float)X, (float)Y), GetNodeBounds().ToAvSize()).PixelAlign();
+
             // Draw shadow
             bool isHover = rect.Contains(mouse.Position);
             g.FillRectangle(Avalonia.Media.Brushes.DarkGray, rect.Translate(isHover ? new Vector(6, 6) : new Vector(4, 4)));
@@ -412,8 +415,7 @@ namespace NodeEditor
                 // TODO: shaky
                 this.CustomEditorAv[Avalonia.Controls.TextBlock.BackgroundProperty] = new Avalonia.Media.SolidColorBrush(fillColor);
             }
-            
-            // TODO: removed rounding
+
             g.DrawRectangle(AvaloniaUtils.BlackPen1, rect);
             
             if (this.IsInteractive)
@@ -423,7 +425,7 @@ namespace NodeEditor
             
             if (this.Name != NewSpecialNodeName)
             {
-                FormattedText formattedText = new FormattedText(Name, CultureInfo.InvariantCulture, Avalonia.Media.FlowDirection.LeftToRight, AvaloniaUtils.FontMonospaceNormal, 9, Avalonia.Media.Brushes.Black);
+                FormattedText formattedText = new FormattedText(Name, CultureInfo.InvariantCulture, Avalonia.Media.FlowDirection.LeftToRight, AvaloniaUtils.FontMonospaceNormal, 11, Avalonia.Media.Brushes.Black);
                 g.DrawText(formattedText, new Avalonia.Point((float)this.X + 3, (float)this.Y + HeaderHeight / 4));
             }
             

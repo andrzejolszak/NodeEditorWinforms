@@ -10,6 +10,7 @@
   <ItemGroup>
     <PackageReference Include="AutomaticGraphLayout" Version="1.1.12" />
     <PackageReference Include="Avalonia" Version="11.0.0" />
+    <PackageReference Include="Avalonia.AvaloniaEdit" Version="11.0.0" />
     <PackageReference Include="Avalonia.Desktop" Version="11.0.0" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="11.0.0" />
     <PackageReference Include="NXUI" Version="11.0.0" />
