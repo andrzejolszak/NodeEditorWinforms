@@ -113,7 +113,7 @@ namespace NodeEditor
 
             if (hover)
             {
-                socketRect.Inflate(new Thickness(2, 0));
+                socketRect.Inflate(new Thickness(2, 0)).PixelAlign();
                 if (Input)
                 {
                     FormattedText formattedText = new FormattedText(Name + ":" + CurriedValue, CultureInfo.InvariantCulture, Avalonia.Media.FlowDirection.LeftToRight, AvaloniaUtils.FontMonospaceCondensed, 9, Avalonia.Media.Brushes.Blue);

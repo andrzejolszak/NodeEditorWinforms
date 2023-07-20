@@ -18,15 +18,19 @@
 using System.Data;
 using System.Reflection;
 using AnimateForms.Core;
+using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media.Immutable;
+using AvaloniaEdit;
+using Sharplog.KME;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.TextBox;
 
 namespace NodeEditor
 {
     /// <summary>
     /// Main control of Node Editor Winforms
     /// </summary>
-    public class NodesControlAv : TemplatedControl
+    public class NodesControlAv : Avalonia.Controls.UserControl
     {
         public NodesGraph MainGraph { get; private set; }
         public readonly Animate Animate = new Animate();
@@ -100,13 +104,13 @@ namespace NodeEditor
         public NodesControlAv(NodeVisual? owner)
         {
             this.Owner = owner;
+            this.Focusable = true;
             
-            // TODO: will at least need to attach event handlers
-            // this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.OnNodesControl_KeyDown);
             this.AttachedToVisualTree += this.OnNodesControl_VisibleChanged;
             this.PointerPressed += this.OnNodesControl_MousePressed;
             this.PointerMoved += this.OnNodesControl_MouseMove;
             this.PointerReleased += this.OnNodesControl_MouseUp;
+            this.KeyDown += this.OnNodesControl_KeyDown;
 
             timer.Interval = 30;
             timer.Elapsed += TimerOnTick;
@@ -115,6 +119,8 @@ namespace NodeEditor
             this.Cursor = this.IsRunMode ? Avalonia.Input.Cursor.Default : AvaloniaUtils.CursorHand.Value;
 
             this.OnNodeSelected += OnNodeContextSelected;
+
+            this.Content = new Avalonia.Controls.Canvas();
         }
 
         private void ContextOnFeedbackInfo(string message, NodeVisual nodeVisual, FeedbackType type, object tag, bool breakExecution)
@@ -149,7 +155,6 @@ namespace NodeEditor
                 MainGraph.RouteEdges();
             }
 
-            // TODO: pointToClient
             MainGraph.DrawAv(e, this._lastMouseState, this.IsRunMode, this.Animate, this.Bounds.Width, this.Bounds.Height);
 
             if (dragSocket != null)
@@ -162,7 +167,7 @@ namespace NodeEditor
                 e.DrawRectangle(new SolidColorBrush(Avalonia.Media.Colors.CornflowerBlue, 0.2), new Avalonia.Media.Pen(Avalonia.Media.Colors.DodgerBlue.ToUInt32()), MakeRect(selectionStart, selectionEnd ,true));
             }
 
-            e.DrawEllipse(new SolidColorBrush(Avalonia.Media.Colors.Pink, 0.5), null, new Rect(this._lastMouseState.Position.X-5, this._lastMouseState.Position.Y-5, 10, 10));
+            e.DrawEllipse(new SolidColorBrush(this.IsFocused ? Avalonia.Media.Colors.GreenYellow :  Avalonia.Media.Colors.Pink, 0.5), null, new Rect(this._lastMouseState.Position.X-5, this._lastMouseState.Position.Y-5, 10, 10));
 
             needRepaint = false;
         }
@@ -187,8 +192,7 @@ namespace NodeEditor
 
             _lastMouseState = e.GetCurrentPoint(this);
 
-            // TODO: screen, client?
-            var em = this.PointToScreen(e.GetPosition(this));
+            var em = e.GetPosition(this);
             if (selectionStart != default)
             {
                 selectionEnd = e.GetPosition(this);
@@ -246,6 +250,8 @@ namespace NodeEditor
 
         public void OnNodesControl_MousePressed(object sender, PointerPressedEventArgs e)
         {
+            if (Context == null) return;
+
             // TODO: does this work as mouse down, or is it called after release?
             PointerUpdateKind updateKind = e.GetCurrentPoint(this).Properties.PointerUpdateKind;
             lastMouseLocation = e.GetPosition(this);
@@ -273,41 +279,64 @@ namespace NodeEditor
                     OwnerGraph = MainGraph
                 };
 
-                // TODO: plug in avalonia edit with completion
-                TextBlock tb = new TextBlock();
-                tb.Width = (int)NodeVisual.NodeWidth - 4;
-                tb.Height = (int)NodeVisual.HeaderHeight - 4;
-                /*tb.BackColor = newAutocompleteNode.NodeColor;
-                tb.BorderStyle = BorderStyle.None;
-                tb.KeyPress += (s, ee) =>
+                TextEditor textEditor = new TextEditor()
                 {
-                    if (ee.KeyChar == (char)Keys.Enter)
+                    Name = "Editor",
+                    FontFamily = AvaloniaUtils.FontMonospaceNormal.FontFamily,
+                    FontWeight = FontWeight.Normal,
+                    FontSize = 12,
+                    HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled,
+                    VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled
+                };
+
+                textEditor.TextArea.RightClickMovesCaret = true;
+                textEditor.TextArea.TextView.Options.AllowScrollBelowDocument = false;
+                textEditor.ContextMenu = new ContextMenu
+                {
+                    ItemsSource = new List<MenuItem>
                     {
-                        SwapAutocompleteNode(tb, newAutocompleteNode);
-                        ee.Handled = true;
+                        new MenuItem { Header = "Copy", InputGesture = new KeyGesture(Key.C, KeyModifiers.Control) },
+                        new MenuItem { Header = "Paste", InputGesture = new KeyGesture(Key.V, KeyModifiers.Control) },
+                        new MenuItem { Header = "Cut", InputGesture = new KeyGesture(Key.X, KeyModifiers.Control) }
                     }
-                };*/
+                };
 
-                newAutocompleteNode.CustomEditorAv = tb;
-                this.LogicalChildren.Add(newAutocompleteNode.CustomEditorAv);
-                newAutocompleteNode.LayoutEditor();
-
-                AutocompleteMenuNS.AutocompleteMenu autocompleteMenu = new AutocompleteMenuNS.AutocompleteMenu();
-                autocompleteMenu.Items = Context.GetType().GetMethods().Where(x => x.GetCustomAttributes(typeof(NodeAttribute), false).Any()).Select(x => x.Name.ToLowerInvariant())
-                    .Concat(new[] { NodeVisual.NewSubsystemNodeNamePrefix, NodeVisual.NewSubsystemInletNodeNamePrefix, NodeVisual.NewSubsystemOutletNodeNamePrefix })
-                    .ToArray();
+                textEditor.Width = textEditor.MinWidth = (int)NodeVisual.NodeWidth - 4;
+                textEditor.Height = textEditor.MinHeight = (int)NodeVisual.HeaderHeight - 8;
+                textEditor.Background = new SolidColorBrush(newAutocompleteNode.NodeColor.ToAvColor());
+                textEditor.BorderThickness = new Thickness(0);
+                textEditor.AddHandler(
+                    TextEditor.KeyDownEvent,
+                    (s, e) =>
+                    {
+                        if (e.Key == Key.Enter)
+                        {
+                            SwapAutocompleteNode(textEditor, textEditor.Text, newAutocompleteNode);
+                            e.Handled = true;
+                        }
+                    },
+                    RoutingStrategies.Tunnel);
                 
-                // autocompleteMenu.SetAutocompleteMenu(tb, autocompleteMenu);
+                textEditor.AttachedToVisualTree += (s, e) =>
+                {
+                    Dispatcher.UIThread.InvokeAsync(() => textEditor.Focus());
+                };
+
+                Completion completion = new Completion(textEditor);
+                completion.ExternalCompletions.AddRange(Context.GetType().GetMethods().Where(x => x.GetCustomAttributes(typeof(NodeAttribute), false).Any()).Select(x => x.Name.ToLowerInvariant())
+                    .Concat(new[] { NodeVisual.NewSubsystemNodeNamePrefix, NodeVisual.NewSubsystemInletNodeNamePrefix, NodeVisual.NewSubsystemOutletNodeNamePrefix })
+                    .Select(x => new Completion.CompletionItem(x, x)));
+
+                newAutocompleteNode.CustomEditorAv = textEditor;
+                newAutocompleteNode.LayoutEditor();
+                (this.Content as Canvas).Children.Add(newAutocompleteNode.CustomEditorAv);
 
                 MainGraph.Nodes.Add(newAutocompleteNode);
                 InvalidateVisual();
                 needRepaint = true;
-                tb.Focus();
 
                 return;
             }
-
-            if (Context == null) return;
 
             if (updateKind == PointerUpdateKind.RightButtonPressed)
             {
@@ -548,13 +577,13 @@ namespace NodeEditor
             needRepaint = true;
         }
 
-        public void SwapAutocompleteNode(TextBox tb, NodeVisual newAutocompleteNode)
+        public void SwapAutocompleteNode(Avalonia.Controls.Control tb, string text, NodeVisual newAutocompleteNode)
         {
             NodeVisual replacementNode = null;
 
-            if (tb.Text.StartsWith(NodeVisual.NewSubsystemNodeNamePrefix))
+            if (text.StartsWith(NodeVisual.NewSubsystemNodeNamePrefix))
             {
-                string name = tb.Text.Substring(NodeVisual.NewSubsystemNodeNamePrefix.Length).Trim();
+                string name = text.Substring(NodeVisual.NewSubsystemNodeNamePrefix.Length).Trim();
                 if (name == "" || name == this.MainGraph.GUID)
                 {
                     return;
@@ -567,9 +596,9 @@ namespace NodeEditor
                 replacementNode.SubsystemGraph.OwnerNode = replacementNode;
                 replacementNode.OwnerGraph = MainGraph;
             }
-            else if (tb.Text.StartsWith(NodeVisual.NewSubsystemInletNodeNamePrefix))
+            else if (text.StartsWith(NodeVisual.NewSubsystemInletNodeNamePrefix))
             {
-                string name = tb.Text.Substring(NodeVisual.NewSubsystemInletNodeNamePrefix.Length).Trim();
+                string name = text.Substring(NodeVisual.NewSubsystemInletNodeNamePrefix.Length).Trim();
                 if (name == "" || this.MainGraph.NodesTyped.Any(x => x.Name == NodeVisual.NewSubsystemInletNodeNamePrefix + " " + name))
                 {
                     return;
@@ -578,9 +607,9 @@ namespace NodeEditor
                 replacementNode = new NodeVisual(NodeVisual.NewSubsystemInletNodeNamePrefix + " " + name, newAutocompleteNode.X, newAutocompleteNode.Y);
                 replacementNode.OwnerGraph = MainGraph;
             }
-            else if (tb.Text.StartsWith(NodeVisual.NewSubsystemOutletNodeNamePrefix))
+            else if (text.StartsWith(NodeVisual.NewSubsystemOutletNodeNamePrefix))
             {
-                string name = tb.Text.Substring(NodeVisual.NewSubsystemOutletNodeNamePrefix.Length).Trim();
+                string name = text.Substring(NodeVisual.NewSubsystemOutletNodeNamePrefix.Length).Trim();
                 if (name == "" || this.MainGraph.NodesTyped.Any(x => x.Name == NodeVisual.NewSubsystemOutletNodeNamePrefix + " " + name))
                 {
                     return;
@@ -591,7 +620,7 @@ namespace NodeEditor
             }
             else
             {
-                string name = tb.Text.Trim();
+                string name = text.Trim();
                 var methods = Context.GetType().GetMethods();
                 MethodInfo info = methods.SingleOrDefault(x => x.Name.Equals(name.Split(' ')[0], StringComparison.InvariantCultureIgnoreCase));
                 if (info is null)
@@ -624,8 +653,8 @@ namespace NodeEditor
                     if (inst is Avalonia.Controls.Control asCtrl)
                     {
                         replacementNode.CustomEditorAv = asCtrl;
-                        asCtrl[Avalonia.Controls.TextBlock.BackgroundProperty] = new Avalonia.Media.SolidColorBrush(newAutocompleteNode.NodeColor.ToAvColor());
-                        this.LogicalChildren.Add(asCtrl);
+                        asCtrl[Avalonia.Controls.TextBox.BackgroundProperty] = new Avalonia.Media.SolidColorBrush(newAutocompleteNode.NodeColor.ToAvColor());
+                        (this.Content as Avalonia.Controls.Canvas).Children.Add(asCtrl);
                     }
 
                     replacementNode.LayoutEditor();
@@ -634,7 +663,7 @@ namespace NodeEditor
 
             if ((object)tb is Avalonia.Controls.Control editorCtrl)
             {
-                this.LogicalChildren.Remove(editorCtrl);
+                (this.Content as Avalonia.Controls.Canvas).Children.Remove(editorCtrl);
             }
 
             MainGraph.Nodes.Remove(newAutocompleteNode);
@@ -721,7 +750,7 @@ namespace NodeEditor
 
                 foreach (var n in selected)
                 {
-                    this.LogicalChildren.Remove(n.CustomEditorAv);
+                    (this.Content as Avalonia.Controls.Canvas).Children.Remove(n.CustomEditorAv);
                     foreach(NodeConnection e in MainGraph.EdgesTyped.Where(x => x.OutputNode == n || x.InputNode == n).ToArray())
                     {
                         MainGraph.RemoveEdge(e);
@@ -871,20 +900,20 @@ namespace NodeEditor
             return false;
         }
 
-        public void OnNodesControl_KeyDown(object sender, KeyEventArgs e)
+        public void OnNodesControl_KeyDown(object sender, Avalonia.Input.KeyEventArgs e)
         {
-            if (e.KeyCode == Keys.Delete)
+            if (e.Key == Key.Delete)
             {
                 DeleteSelectedNodes(null);
                 DeleteHoveredConns();
             }
 
-            if (e.Control && e.KeyCode == Keys.E)
+            if (e.KeyModifiers.HasFlag(KeyModifiers.Control) && e.Key == Key.E)
             {
                 this.ToggleRunMode();
             }
 
-            if (e.Control && e.KeyCode == Keys.R)
+            if (e.KeyModifiers.HasFlag(KeyModifiers.Control) && e.Key == Key.R)
             {
                 this.ToggleEdgeRouting();
             }
@@ -909,10 +938,14 @@ namespace NodeEditor
         {
             this.Context = context;
             this.MainGraph = mainGraph;
-            
-            // TODO:
-            this.LogicalChildren.Clear();
-            this.LogicalChildren.AddRange(mainGraph.NodesTyped.Where(x => x.CustomEditorAv != null).Select(x => x.CustomEditorAv).ToArray());
+
+            (this.Content as Avalonia.Controls.Canvas).Children.Clear();
+            foreach(NodeVisual n in mainGraph.NodesTyped.Where(x => x.CustomEditorAv != null))
+            {
+                n.CustomEditorAv.UpdateLayout();
+                (this.Content as Avalonia.Controls.Canvas).Children.Add(n.CustomEditorAv);
+                n.LayoutEditor();
+            }
 
             this.MinHeight= 600;
             this.Bounds = new Avalonia.Rect(0, 0, 800, 600);

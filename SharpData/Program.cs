@@ -1,4 +1,6 @@
-﻿using Microsoft.Msagl.Layout.LargeGraphLayout;
+﻿using AvaloniaEdit.CodeCompletion;
+using Microsoft.Msagl.Core.Layout;
+using Microsoft.Msagl.Layout.LargeGraphLayout;
 using NodeEditor;
 using SampleCommon;
 using System;
@@ -18,7 +20,7 @@ namespace MathSample
         static void Main()
         {
             Task.Run(MainAvalonia);
-            Task.Delay(2000).Wait();
+            Task.Delay(1000).Wait();
 
             MainWinForm();
         }
@@ -45,9 +47,21 @@ namespace MathSample
             {
                 MathContext context = new MathContext();
                 NodesGraph[] graphs = NodesGraph.Deserialize(File.ReadAllBytes("..\\..\\..\\default.nds"), context);
+                foreach(NodeVisual node in graphs[0].Nodes)
+                {
+                    if (node.CustomEditor is Label asLabel)
+                    {
+                        node.CustomEditorAv = new Avalonia.Controls.Label() { Content = asLabel.Text, Background = Avalonia.Media.Brushes.Transparent };
+                        node.CustomEditorAv.Height = node.CustomEditorAv.MinHeight = node.CustomEditor.Height;
+                        node.CustomEditorAv.Width = node.CustomEditorAv.MinWidth = node.CustomEditor.Width;
+                        node.CustomEditor = null;
+                    }
+                }
+
                 NodesControlAv control = new NodesControlAv(null);
 
                 Window(out var window)
+                    .Styles(GetWindowCompletionStyles())
                     .Title("NXUI").Width(800).Height(650)
                     .Content(
                       StackPanel()
@@ -57,7 +71,7 @@ namespace MathSample
                           control
                           )
                         )
-                    .Title(tb1.ObserveText().Select(x => x?.ToUpper()));
+                    .Title("Test");
 
                 window.Closed += (e, s) =>
                 {
@@ -69,10 +83,15 @@ namespace MathSample
                 {
                     control.Owner?.ResetSocketsCache();
                 };
-                control.Loaded += (e, s) =>
+                control.AttachedToVisualTree += (e, s) =>
                 {
                     control.Initialize(context, graphs[0]);
                     control.OnSubgraphOpenRequest += Control_OnSubgraphOpenRequest;
+                };
+                
+                window.KeyDown += (e, s) => 
+                {
+                    s.Handled = false;
                 };
 
                 return window;
@@ -89,5 +108,13 @@ namespace MathSample
             // TODO: open a new one with the given owner, attach the control events
 
         }
+
+        public static IStyle[] GetWindowCompletionStyles() =>
+            new IStyle[]{
+                new StyleInclude((Uri?)null) { Source = new Uri("avares://AvaloniaEdit/Themes/Fluent/AvaloniaEdit.xaml") },
+                Style(out var completionStyle)
+                    .Selector(x => x.OfType<CompletionList>().Template().OfType<CompletionListBox>()
+                      .Name("PART_ListBox"))
+                    .SetAutoCompleteBoxItemTemplate(new DataTemplate() { DataType = typeof(ICompletionData), Content = new TextBlock() })};
     }
 }

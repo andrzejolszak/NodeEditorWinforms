@@ -275,15 +275,15 @@ namespace NodeEditor
             bw.Write(node.Y);
             bw.Write(node.IsInteractive);
             bw.Write(node.Name);
-            if (node.CustomEditor == null)
+            if (node.CustomEditorAv == null)
             {
                 bw.Write("");
                 bw.Write("");
             }
             else
             {
-                bw.Write(node.CustomEditor.GetType().Assembly.GetName().Name);
-                bw.Write(node.CustomEditor.GetType().FullName);
+                bw.Write(node.CustomEditorAv.GetType().Assembly.GetName().Name);
+                bw.Write(node.CustomEditorAv.GetType().FullName);
             }
             bw.Write(node.MethodInf?.Name ?? "");
             bw.Write(node.SubsystemGraph?.GUID ?? "");

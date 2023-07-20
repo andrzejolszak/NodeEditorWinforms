@@ -57,8 +57,8 @@ namespace NodeEditor
         public bool IsSelected { get; set; }
         public bool InvokeOnLoad { get; set; }
         public FeedbackType Feedback { get; set; }
-        public Control CustomEditor { get; internal set; }
-        public Avalonia.Controls.Control CustomEditorAv { get; internal set; }
+        public Control CustomEditor { get; set; }
+        public Avalonia.Controls.Control CustomEditorAv { get; set; }
         public string GUID = Guid.NewGuid().ToString();
         public Color NodeColor = Color.FromArgb(0xFF, 0xF8, 0xF8, 0xFF);
         public Avalonia.Media.Color NodeColorAv = Avalonia.Media.Color.FromArgb(0xFF, 0xF8, 0xF8, 0xFF);
@@ -290,9 +290,9 @@ namespace NodeEditor
                 csize = new SizeF(CustomEditor.ClientSize.Width, CustomEditor.ClientSize.Height + HeaderHeight + 8 + SocketVisual.SocketHeight);                
             }
 
-            if (CustomEditorAv != null && CustomEditorAv.Bounds != default && this.Name != NewSpecialNodeName)
+            if (CustomEditorAv != null && this.Name != NewSpecialNodeName)
             {
-                csize = new SizeF((float)CustomEditorAv.Bounds.Width, (float)(CustomEditorAv.Bounds.Height + HeaderHeight + 8 + SocketVisual.SocketHeight));
+                csize = new SizeF((float)CustomEditorAv.Width, (float)(CustomEditorAv.Height + HeaderHeight + 8 + SocketVisual.SocketHeight));
             }
 
             var h = HeaderHeight;
@@ -409,13 +409,6 @@ namespace NodeEditor
             
             g.FillRectangle(new Avalonia.Media.SolidColorBrush(fillColor), rect);
 
-            if (this.CustomEditorAv != null && this.CustomEditorAv[Avalonia.Controls.TextBlock.BackgroundProperty] is SolidColorBrush b &&
-                (b.Color == NodeColorAv || b.Color == Avalonia.Media.Colors.White || b.Color == Avalonia.Media.Colors.PaleGoldenrod))
-            {
-                // TODO: shaky
-                this.CustomEditorAv[Avalonia.Controls.TextBlock.BackgroundProperty] = new Avalonia.Media.SolidColorBrush(fillColor);
-            }
-
             g.DrawRectangle(AvaloniaUtils.BlackPen1, rect);
             
             if (this.IsInteractive)
@@ -461,21 +454,29 @@ namespace NodeEditor
             _ = animate.Recolor(
                 this.GUID,
                 orgColor,
-                x => this.NodeColor = x,
+                x =>
+                {
+                    this.NodeColor = x;
+                    this.NodeColorAv = Avalonia.Media.Color.FromUInt32((uint)x.ToArgb());
+                },
                 Easings.CubicIn,
                 200,
                 Color.Gold).ContinueWith(
                     t => animate.Recolor(
                         this.GUID,
                         this.NodeColor,
-                        y => this.NodeColor = y,
+                        y =>
+                        {
+                            this.NodeColor = y;
+                            this.NodeColorAv = Avalonia.Media.Color.FromUInt32((uint)y.ToArgb());
+                        },
                         Easings.CubicOut,
                         50,
                         orgColor)
                 );
         }
 
-        internal void LayoutEditor()
+        public void LayoutEditor()
         {
             if (CustomEditor != null)
             {
@@ -493,12 +494,13 @@ namespace NodeEditor
             {
                 if (this.Name == NewSpecialNodeName)
                 {
-                    // TODO: likely wrong
-                    CustomEditorAv.RenderTransformOrigin = new RelativePoint(4, 8, RelativeUnit.Relative);
+                    CustomEditorAv[Avalonia.Controls.Canvas.LeftProperty] = 4d + this.X;
+                    CustomEditorAv[Avalonia.Controls.Canvas.TopProperty] = 8 + this.Y;
                 }
                 else
                 {
-                    CustomEditorAv.RenderTransformOrigin = new RelativePoint(4, HeaderHeight + 4, RelativeUnit.Relative);
+                    CustomEditorAv[Avalonia.Controls.Canvas.LeftProperty] = 4d + this.X;
+                    CustomEditorAv[Avalonia.Controls.Canvas.TopProperty] = HeaderHeight + 4 + this.Y;
                 }
             }
         }
