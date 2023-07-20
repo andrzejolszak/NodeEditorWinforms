@@ -32,11 +32,8 @@ public class Completion
     public void ShowCompletionMenu()
     {
         CompletionWindow = new CompletionWindow(this._textEditor.TextArea);
-        CompletionWindow.Closed += (o, args) => CompletionWindow = null;
-
         CompletionWindow.HorizontalScrollBarVisibilityVisible();
-        var data = CompletionWindow.CompletionList.CompletionData;
-        data.AddRange(ExternalCompletions);
+        CompletionWindow.Closed += (o, args) => CompletionWindow = null;
         if (CompletionWindow.CompletionList.ListBox is not null)
         {
             CompletionWindow.CompletionList.ListBox.ItemTemplate = new FuncDataTemplate<CompletionItem>((data, nameScope) =>
@@ -61,6 +58,16 @@ public class Completion
                 }
             };
         }
+
+        CompletionWindow.CompletionList.CompletionData.AddRange(ExternalCompletions);
+
+        // Hack to force content matching on initial open
+        CompletionWindow.StartOffset = 0;
+        TextViewPosition originalPosition = this._textEditor.TextArea.Caret.Position;
+        TextViewPosition changedPosition = this._textEditor.TextArea.Caret.Position;
+        changedPosition.IsAtEndOfLine = !changedPosition.IsAtEndOfLine;
+        this._textEditor.TextArea.Caret.Position = changedPosition;
+        this._textEditor.TextArea.Caret.Position = originalPosition;
 
         CompletionWindow.Show();
     }

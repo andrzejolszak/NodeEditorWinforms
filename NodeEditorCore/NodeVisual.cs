@@ -459,8 +459,8 @@ namespace NodeEditor
                     this.NodeColor = x;
                     this.NodeColorAv = Avalonia.Media.Color.FromUInt32((uint)x.ToArgb());
                 },
-                Easings.CubicIn,
-                200,
+                Easings.ExpIn,
+                50,
                 Color.Gold).ContinueWith(
                     t => animate.Recolor(
                         this.GUID,
@@ -471,7 +471,7 @@ namespace NodeEditor
                             this.NodeColorAv = Avalonia.Media.Color.FromUInt32((uint)y.ToArgb());
                         },
                         Easings.CubicOut,
-                        50,
+                        100,
                         orgColor)
                 );
         }
