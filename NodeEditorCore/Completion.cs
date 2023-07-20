@@ -14,6 +14,9 @@ public class Completion
 
     public CompletionWindow CompletionWindow { get; private set; }
 
+    public CompletionItem SelectedItem { get; private set; }
+
+
     private OverloadInsightWindow _overloadInsightWindow;
 
     public List<CompletionItem> ExternalCompletions { get; } = new List<CompletionItem>();
@@ -47,7 +50,15 @@ public class Completion
             CompletionWindow.CompletionList.ListBox.SelectionChanged += (s, e) =>
             {
                 // TODO: mouse selection
-                // _completionWindow.CompletionList.RequestInsertion(e);
+                //_completionWindow.CompletionList.RequestInsertion(e);
+                if (e.AddedItems.Count == 1 && e.AddedItems[0] is CompletionItem item)
+                {
+                    this.SelectedItem = item;
+                }
+                else
+                {
+                    this.SelectedItem = null;
+                }
             };
         }
 

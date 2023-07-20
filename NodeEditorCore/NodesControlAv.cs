@@ -305,18 +305,6 @@ namespace NodeEditor
                 textEditor.Height = textEditor.MinHeight = (int)NodeVisual.HeaderHeight - 8;
                 textEditor.Background = new SolidColorBrush(newAutocompleteNode.NodeColor.ToAvColor());
                 textEditor.BorderThickness = new Thickness(0);
-                textEditor.AddHandler(
-                    TextEditor.KeyDownEvent,
-                    (s, e) =>
-                    {
-                        if (e.Key == Key.Enter)
-                        {
-                            SwapAutocompleteNode(textEditor, textEditor.Text, newAutocompleteNode);
-                            e.Handled = true;
-                        }
-                    },
-                    RoutingStrategies.Tunnel);
-                
                 textEditor.AttachedToVisualTree += (s, e) =>
                 {
                     Dispatcher.UIThread.InvokeAsync(() => textEditor.Focus());
@@ -326,6 +314,19 @@ namespace NodeEditor
                 completion.ExternalCompletions.AddRange(Context.GetType().GetMethods().Where(x => x.GetCustomAttributes(typeof(NodeAttribute), false).Any()).Select(x => x.Name.ToLowerInvariant())
                     .Concat(new[] { NodeVisual.NewSubsystemNodeNamePrefix, NodeVisual.NewSubsystemInletNodeNamePrefix, NodeVisual.NewSubsystemOutletNodeNamePrefix })
                     .Select(x => new Completion.CompletionItem(x, x)));
+
+                textEditor.AddHandler(
+                    TextEditor.KeyDownEvent,
+                    (s, e) =>
+                    {
+                        if (e.Key == Key.Enter)
+                        {
+                            string fullText = completion.IsVisible ? completion.SelectedItem.Text : textEditor.Text;
+                            SwapAutocompleteNode(textEditor, fullText, newAutocompleteNode);
+                            e.Handled = true;
+                        }
+                    },
+                    RoutingStrategies.Tunnel);
 
                 newAutocompleteNode.CustomEditorAv = textEditor;
                 newAutocompleteNode.LayoutEditor();

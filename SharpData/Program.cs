@@ -20,7 +20,7 @@ namespace MathSample
         static void Main()
         {
             Task.Run(MainAvalonia);
-            Task.Delay(1000).Wait();
+            Task.Delay(2000).Wait();
 
             MainWinForm();
         }
@@ -75,7 +75,7 @@ namespace MathSample
 
                 window.Closed += (e, s) =>
                 {
-                    File.WriteAllBytes("..\\..\\..\\default.nds", NodesGraph.Serialize(control.MainGraph));
+                    // File.WriteAllBytes("..\\..\\..\\default.nds", NodesGraph.Serialize(control.MainGraph));
                     System.Windows.Forms.Application.Exit();
                 };
 
@@ -87,11 +87,6 @@ namespace MathSample
                 {
                     control.Initialize(context, graphs[0]);
                     control.OnSubgraphOpenRequest += Control_OnSubgraphOpenRequest;
-                };
-                
-                window.KeyDown += (e, s) => 
-                {
-                    s.Handled = false;
                 };
 
                 return window;
