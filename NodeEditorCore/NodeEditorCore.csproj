@@ -18,15 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Update="Autocomplete\AutocompleteListView.cs" />
-    <Compile Update="Autocomplete\AutocompleteMenu.cs">
-      <SubType>Component</SubType>
-    </Compile>
-    <Compile Update="Autocomplete\AutocompleteMenuHost.cs">
-      <SubType>Component</SubType>
-    </Compile>
     <Compile Update="NodesControlAv.cs" />
-    <Compile Update="NodesControl.cs" />
   </ItemGroup>
 
 </Project>

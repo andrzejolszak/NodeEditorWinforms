@@ -115,7 +115,7 @@ namespace NodeEditor
             timer.Interval = 30;
             timer.Elapsed += TimerOnTick;
             timer.Start();
-           
+
             this.Cursor = this.IsRunMode ? Avalonia.Input.Cursor.Default : AvaloniaUtils.CursorHand.Value;
 
             this.OnNodeSelected += OnNodeContextSelected;
@@ -186,16 +186,18 @@ namespace NodeEditor
             return new Rect(round ? Math.Round(x) : x, round ? Math.Round(y) : y, round ? Math.Round(w) : w, round ? Math.Round(h) : h);
         }
 
-        public void OnNodesControl_MouseMove(object s, PointerEventArgs e)
+        public void OnNodesControl_MouseMove(object s, PointerEventArgs eventArgs) => this.OnNodesControl_MouseMove(eventArgs.GetCurrentPoint(this));
+
+        public void OnNodesControl_MouseMove(PointerPoint pointerPoint)
         {
             Avalonia.Point prevPosition = this._lastMouseState.Position;
 
-            _lastMouseState = e.GetCurrentPoint(this);
+            _lastMouseState = pointerPoint;
 
-            var em = e.GetPosition(this);
+            var em = _lastMouseState.Position;
             if (selectionStart != default)
             {
-                selectionEnd = e.GetPosition(this);
+                selectionEnd = em;
             }
 
             if (mdown && !IsRunMode)
@@ -248,16 +250,13 @@ namespace NodeEditor
             needRepaint = true;
         }
 
-        public void OnNodesControl_MousePressed(object sender, PointerPressedEventArgs e)
+        public void OnNodesControl_MousePressed(object sender, PointerPressedEventArgs eventArgs) => this.OnNodesControl_MousePressed(eventArgs.GetCurrentPoint(this).Properties.PointerUpdateKind, eventArgs.ClickCount, eventArgs.GetPosition(this), eventArgs.KeyModifiers);
+
+        public void OnNodesControl_MousePressed(PointerUpdateKind updateKind, int clickCount, Avalonia.Point position, KeyModifiers keyModifiers = KeyModifiers.None)
         {
             if (Context == null) return;
 
-            // TODO: does this work as mouse down, or is it called after release?
-            PointerUpdateKind updateKind = e.GetCurrentPoint(this).Properties.PointerUpdateKind;
-            lastMouseLocation = e.GetPosition(this);
-
-            // OnNodesControl_MouseClick, OnNodesControl_DoubleMouseClick
-            if (e.ClickCount == 2)
+            if (clickCount == 2)
             {
                 NodeVisual selectedNode = MainGraph.NodesTyped.FirstOrDefault(x => x.IsSelected);
                 if (selectedNode?.SubsystemGraph != null)
@@ -397,7 +396,7 @@ namespace NodeEditor
 
                 Focus();
 
-                if ((e.KeyModifiers & KeyModifiers.Shift) != KeyModifiers.Shift)
+                if (keyModifiers.HasFlag(KeyModifiers.Shift))
                 {
                     foreach(NodeVisual n in MainGraph.Nodes)
                     {
@@ -420,7 +419,7 @@ namespace NodeEditor
                         var socket = nodeWhole.GetSockets().All.FirstOrDefault(x => x.GetBounds().ToAvRect().Contains(this._lastMouseState.Position));
                         if (socket != null)
                         {
-                            if ((e.KeyModifiers & KeyModifiers.Control) == KeyModifiers.Control)
+                            if (keyModifiers.HasFlag(KeyModifiers.Control))
                             {
                                 var connection =
                                     MainGraph.EdgesTyped.FirstOrDefault(
@@ -513,7 +512,7 @@ namespace NodeEditor
             return AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(x => x.FullName == assemblyName.FullName);
         }
 
-        public void OnNodesControl_MouseUp(object sender, PointerReleasedEventArgs e)
+        public void OnNodesControl_MouseUp(object sender, PointerReleasedEventArgs eventArgs)
         {
             if (!IsRunMode
                 && this.MainGraph.NodesTyped.Count(x => x.IsSelected) == 1

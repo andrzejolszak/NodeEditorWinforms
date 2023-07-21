@@ -17,7 +17,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Update="ControlNodeEditor.cs" />
     <Compile Update="FormMathSample.cs">
       <SubType>Form</SubType>
     </Compile>

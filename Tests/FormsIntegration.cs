@@ -1,5 +1,9 @@
+using Avalonia.Headless.NUnit;
+using Avalonia.Rendering.SceneGraph;
+using AvaloniaEdit;
 using FluentAssertions;
 using Microsoft.Msagl.Core.Layout;
+using Moq;
 using NodeEditor;
 using NUnit.Framework;
 using NUnit.Framework.Internal;
@@ -15,21 +19,21 @@ public class FormsIntegration
 {
     private BasicContext _context;
     private NodesGraph _graph;
-    private NodesControl _control;
+    private NodesControlAv _control;
 
     [SetUp]
     public void Setup()
     {
         this._context = new BasicContext();
         this._graph = new NodesGraph();
-        this._control = new NodesControl();
+        this._control = new NodesControlAv(null);
         _control.Initialize(_context, _graph);
         Repaint();
 
         _graph.Nodes.Should().HaveCount(0);
     }
 
-    [Test]
+    [AvaloniaTest]
     public void SerializationRoundtrip()
     {
         string filePath = "..\\..\\..\\..\\SharpData\\default.nds";
@@ -37,7 +41,7 @@ public class FormsIntegration
 
         BasicContext context = new BasicContext();
         NodesGraph[] graphs = NodesGraph.Deserialize(originalFile, context);
-        NodesControl control = new NodesControl();
+        NodesControlAv control = new NodesControlAv(null);
         control.Initialize(context, graphs[0]);
         control.MainGraph.Nodes.Should().HaveCountGreaterThan(0);
         control.MainGraph.Edges.Should().HaveCountGreaterThan(0);
@@ -48,7 +52,7 @@ public class FormsIntegration
         // File.WriteAllBytes(filePath, serialized);
     }
 
-    [Test]
+    [AvaloniaTest]
     public void AddAndConnectControls()
     {
         NodeVisual loadBang = AddNode(nameof(BasicContext.LoadBang));
@@ -58,7 +62,7 @@ public class FormsIntegration
         this._graph.Nodes.Should().HaveCount(3);
 
         ClickNode(flipper);
-        PressKeys(Keys.Delete);
+        PressKey(Key.Delete);
         this._graph.Nodes.Should().HaveCount(2);
 
         // Curried node
@@ -93,18 +97,18 @@ public class FormsIntegration
         AssertOutputValue(counterC, 0, Bang.Instance);
     }
 
-    void ToggleEditMode() => PressKeys(Keys.Control | Keys.E);
+    void ToggleEditMode() => PressKey(Key.E, KeyModifiers.Control);
 
-    void PressKeys(Keys keys)
+    void PressKey(Key key, KeyModifiers modifiers = KeyModifiers.None)
     {
-        _control.OnNodesControl_KeyDown(null, new KeyEventArgs(keys));
+        _control.OnNodesControl_KeyDown(null, new Avalonia.Input.KeyEventArgs() { Key = key, KeyModifiers = modifiers });
         Repaint();
     }
 
     void ClickNode(NodeVisual node)
     {
-        _control.OnNodesControl_MouseDown(null, new MouseEventArgs(MouseButtons.Left, 1, (int)node.X, (int)(node.Y + SocketVisual.SocketHeight + 5), 0));
-        _control.OnNodesControl_MouseUp(null, new MouseEventArgs(MouseButtons.None, 0, (int)node.X, (int)(node.Y + SocketVisual.SocketHeight + 5), 0));
+        _control.OnNodesControl_MousePressed(PointerUpdateKind.LeftButtonPressed, 1, new Avalonia.Point((int)node.X, (int)(node.Y + SocketVisual.SocketHeight + 5)));
+        _control.OnNodesControl_MouseUp(null, null);
         Repaint();
     }
 
@@ -112,18 +116,18 @@ public class FormsIntegration
 
     NodeVisual AddNode(string nodeName)
     {
-        int origControlsCount = _control.Controls.Count;
+        int origControlsCount = (_control.Content as Canvas).Children.Count;
 
-        _control.OnNodesControl_DoubleMouseClick(null, new MouseEventArgs(MouseButtons.Left, 2, (_graph.Nodes.Count + 1) * 200, (_graph.Nodes.Count + 1) * 200, 0));
+        _control.OnNodesControl_MousePressed(PointerUpdateKind.LeftButtonPressed, 2, new Avalonia.Point((_graph.Nodes.Count + 1) * 200, (_graph.Nodes.Count + 1) * 200));
 
         _graph.Nodes.Count(x => (x as NodeVisual)!.Name == NodeVisual.NewSpecialNodeName).Should().Be(1);
-        _control.Controls.Count.Should().Be(origControlsCount + 1);
+        (_control.Content as Canvas).Children.Count.Should().Be(origControlsCount + 1);
 
-        TextBox textBox = _control.Controls[_control.Controls.Count - 1] as TextBox;
+        TextEditor textBox = (_control.Content as Canvas).Children.Last() as TextEditor;
         textBox.Should().NotBeNull();
         textBox.Text = nodeName;
 
-        _control.SwapAutocompleteNode(textBox, _graph.Nodes.Single(x => (x as NodeVisual).Name == NodeVisual.NewSpecialNodeName) as NodeVisual);
+        _control.SwapAutocompleteNode(textBox, textBox.Text, _graph.Nodes.Single(x => (x as NodeVisual).Name == NodeVisual.NewSpecialNodeName) as NodeVisual);
 
         _graph.Nodes.Count(x => (x as NodeVisual).Name == NodeVisual.NewSpecialNodeName).Should().Be(0);
         _graph.Nodes.Count(x => (x as NodeVisual).Name == nodeName).Should().Be(1);
@@ -140,9 +144,9 @@ public class FormsIntegration
         SocketVisual src = sourceNode.GetSockets().Outputs[sourcePort];
         SocketVisual dest = destinationNode.GetSockets().Inputs[destinationPort];
 
-        _control.OnNodesControl_MouseDown(null, new MouseEventArgs(MouseButtons.Left, 1, (int)src.GetBounds().X, (int)src.GetBounds().Y, 0));
-        _control.OnNodesControl_MouseMove(null, new MouseEventArgs(MouseButtons.None, 0, (int)dest.GetBounds().X, (int)dest.GetBounds().Y, 0));
-        _control.OnNodesControl_MouseUp(null, new MouseEventArgs(MouseButtons.None, 0, (int)dest.GetBounds().X, (int)dest.GetBounds().Y, 0));
+        _control.OnNodesControl_MousePressed(PointerUpdateKind.LeftButtonPressed, 1, new Avalonia.Point((int)src.GetBounds().X, (int)src.GetBounds().Y));
+        _control.OnNodesControl_MouseMove(new PointerPoint(null, new Avalonia.Point((int)dest.GetBounds().X, (int)dest.GetBounds().Y), new PointerPointProperties()));
+        _control.OnNodesControl_MouseUp(null, null);
 
         Repaint();
 
@@ -151,5 +155,5 @@ public class FormsIntegration
         return _graph.Edges.Last() as NodeConnection;
     }
 
-    void Repaint() => _control.OnNodesControl_Paint(null, new PaintEventArgs(Graphics.FromImage(new Bitmap(1024, 768)), new Rectangle(0, 0, 1024, 768)));
+    void Repaint() => _control.Render(new Mock<DrawingContext>().Object);
 }

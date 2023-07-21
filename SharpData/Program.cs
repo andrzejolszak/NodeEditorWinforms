@@ -1,13 +1,5 @@
 ﻿using AvaloniaEdit.CodeCompletion;
-using Microsoft.Msagl.Core.Layout;
-using Microsoft.Msagl.Layout.LargeGraphLayout;
 using NodeEditor;
-using SampleCommon;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Windows.Forms;
 
 namespace MathSample
 {
@@ -19,10 +11,7 @@ namespace MathSample
         [STAThread]
         static void Main()
         {
-            Task.Run(MainAvalonia);
-            Task.Delay(2000).Wait();
-
-            MainWinForm();
+            MainAvalonia();
         }
 
         static void MainWinForm()

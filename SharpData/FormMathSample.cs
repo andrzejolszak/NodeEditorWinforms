@@ -32,9 +32,9 @@ namespace MathSample
 
         private void FormMathSample_Load(object sender, EventArgs e)
         {
-            controlNodeEditor.nodesControl.Initialize(context, mainGraph);
-
-            controlNodeEditor.nodesControl.OnSubgraphOpenRequest += NodesControl_OnSubgraphOpenRequest;
+            // controlNodeEditor.nodesControl.Initialize(context, mainGraph);
+            // 
+            // controlNodeEditor.nodesControl.OnSubgraphOpenRequest += NodesControl_OnSubgraphOpenRequest;
         }
 
         private void NodesControl_OnSubgraphOpenRequest(NodeVisual obj)
@@ -45,7 +45,7 @@ namespace MathSample
 
         private void FormMathSample_Shown(object sender, EventArgs e)
         {
-            controlNodeEditor.Focus();
+            // controlNodeEditor.Focus();
         }
     }
 }

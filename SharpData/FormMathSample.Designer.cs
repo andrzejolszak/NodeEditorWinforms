@@ -28,23 +28,13 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.controlNodeEditor = new SampleCommon.ControlNodeEditor();
             this.SuspendLayout();
-            // 
-            // controlNodeEditor
-            // 
-            this.controlNodeEditor.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.controlNodeEditor.Location = new System.Drawing.Point(0, 0);
-            this.controlNodeEditor.Name = "controlNodeEditor";
-            this.controlNodeEditor.Size = new System.Drawing.Size(957, 510);
-            this.controlNodeEditor.TabIndex = 0;
             // 
             // FormMathSample
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(957, 510);
-            this.Controls.Add(this.controlNodeEditor);
             this.Name = "FormMathSample";
             this.Text = "NodeEditor WinForms - Math Sample";
             this.Load += new System.EventHandler(this.FormMathSample_Load);
@@ -54,8 +44,6 @@
         }
 
         #endregion
-
-        private SampleCommon.ControlNodeEditor controlNodeEditor;
     }
 }
 
