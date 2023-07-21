@@ -286,6 +286,9 @@ namespace NodeEditor
                     loadedNode.CustomEditorAv = Activator.CreateInstance(customEditorAssembly, customEditor).Unwrap() as Control;
                 }
 
+                loadedNode.CustomEditorAv.MinWidth = loadedNode.CustomEditorAv.Width = NodeVisual.NodeWidth;
+                loadedNode.CustomEditorAv.MinHeight = loadedNode.CustomEditorAv.Height = NodeVisual.HeaderHeight;
+
                 loadedNode.LayoutEditor();
             }
             return (loadedNode, subsystemGuid);

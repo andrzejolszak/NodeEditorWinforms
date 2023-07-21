@@ -1,3 +1,4 @@
+using Avalonia.Controls.Shapes;
 using Avalonia.Headless.NUnit;
 using AvaloniaEdit;
 using FluentAssertions;
@@ -100,7 +101,8 @@ public class FormsIntegration
 
     void ClickNode(NodeVisual node)
     {
-        _control.OnNodesControl_MousePressed(PointerUpdateKind.LeftButtonPressed, 1, new Avalonia.Point((int)node.X, (int)(node.Y + SocketVisual.SocketHeight + 5)));
+        _control.OnNodesControl_MouseMove(new PointerPoint(null, new Point((int)node.X, (int)(node.Y + SocketVisual.SocketHeight + 5)), new PointerPointProperties()));
+        _control.OnNodesControl_MousePressed(PointerUpdateKind.LeftButtonPressed, 1);
         _control.OnNodesControl_MouseUp(null, null);
         Repaint();
     }
@@ -111,7 +113,8 @@ public class FormsIntegration
     {
         int origControlsCount = (_control.Content as Canvas).Children.Count;
 
-        _control.OnNodesControl_MousePressed(PointerUpdateKind.LeftButtonPressed, 2, new Avalonia.Point((_graph.Nodes.Count + 1) * 200, (_graph.Nodes.Count + 1) * 200));
+        _control.OnNodesControl_MouseMove(new PointerPoint(null, new Point((_graph.Nodes.Count + 1) * 200, (_graph.Nodes.Count + 1) * 200), new PointerPointProperties()));
+        _control.OnNodesControl_MousePressed(PointerUpdateKind.LeftButtonPressed, 2);
 
         _graph.Nodes.Count(x => (x as NodeVisual)!.Name == NodeVisual.NewSpecialNodeName).Should().Be(1);
         (_control.Content as Canvas).Children.Count.Should().Be(origControlsCount + 1);
@@ -137,8 +140,9 @@ public class FormsIntegration
         SocketVisual src = sourceNode.GetSockets().Outputs[sourcePort];
         SocketVisual dest = destinationNode.GetSockets().Inputs[destinationPort];
 
-        _control.OnNodesControl_MousePressed(PointerUpdateKind.LeftButtonPressed, 1, new Avalonia.Point((int)src.GetBounds().X, (int)src.GetBounds().Y));
-        _control.OnNodesControl_MouseMove(new PointerPoint(null, new Avalonia.Point((int)dest.GetBounds().X, (int)dest.GetBounds().Y), new PointerPointProperties()));
+        _control.OnNodesControl_MouseMove(new PointerPoint(null, new Point((int)src.GetBounds().X, (int)src.GetBounds().Y), new PointerPointProperties()));
+        _control.OnNodesControl_MousePressed(PointerUpdateKind.LeftButtonPressed, 1);
+        _control.OnNodesControl_MouseMove(new PointerPoint(null, new Point((int)dest.GetBounds().X, (int)dest.GetBounds().Y), new PointerPointProperties()));
         _control.OnNodesControl_MouseUp(null, null);
 
         Repaint();

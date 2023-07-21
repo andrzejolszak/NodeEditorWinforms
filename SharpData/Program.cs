@@ -51,7 +51,7 @@ namespace MathSample
 
                 window.Closed += (e, s) =>
                 {
-                    // File.WriteAllBytes("..\\..\\..\\default.nds", NodesGraph.Serialize(control.MainGraph));
+                    File.WriteAllBytes("..\\..\\..\\default.nds", NodesGraph.Serialize(control.MainGraph));
                 };
 
                 control.Unloaded += (e, s) =>

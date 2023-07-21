@@ -246,9 +246,9 @@ namespace NodeEditor
             needRepaint = true;
         }
 
-        public void OnNodesControl_MousePressed(object sender, PointerPressedEventArgs eventArgs) => this.OnNodesControl_MousePressed(eventArgs.GetCurrentPoint(this).Properties.PointerUpdateKind, eventArgs.ClickCount, eventArgs.GetPosition(this), eventArgs.KeyModifiers);
+        public void OnNodesControl_MousePressed(object sender, PointerPressedEventArgs eventArgs) => this.OnNodesControl_MousePressed(eventArgs.GetCurrentPoint(this).Properties.PointerUpdateKind, eventArgs.ClickCount, eventArgs.KeyModifiers);
 
-        public void OnNodesControl_MousePressed(PointerUpdateKind updateKind, int clickCount, Avalonia.Point position, KeyModifiers keyModifiers = KeyModifiers.None)
+        public void OnNodesControl_MousePressed(PointerUpdateKind updateKind, int clickCount, KeyModifiers keyModifiers = KeyModifiers.None)
         {
             if (Context == null) return;
 

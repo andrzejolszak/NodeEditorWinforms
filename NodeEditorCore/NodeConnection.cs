@@ -313,18 +313,18 @@ namespace NodeEditor
                 Avalonia.Media.Pen orgPen = this.PenEmhemeralAv;
                 _ = animate.Recolor(
                     this.GUIDEphemeral,
-                    (orgPen.Brush as SolidColorBrush).Color,
+                    (orgPen.Brush as ISolidColorBrush).Color,
                     x => this.PenEmhemeralAv = new Avalonia.Media.Pen(new SolidColorBrush(x), this.PenEmhemeralAv.Thickness),
                     Easings.CubicIn,
                     200,
                     Colors.DarkGoldenrod).ContinueWith(
                         t => animate.Recolor(
                         this.GUIDEphemeral,
-                            (this.PenEmhemeralAv.Brush as SolidColorBrush).Color,
+                            (this.PenEmhemeralAv.Brush as ISolidColorBrush).Color,
                             x => this.PenEmhemeralAv = new Avalonia.Media.Pen(new SolidColorBrush(x), this.PenEmhemeralAv.Thickness),
                             Easings.CubicOut,
                             50,
-                            (orgPen.Brush as SolidColorBrush).Color)
+                            (orgPen.Brush as ISolidColorBrush).Color)
                     );
             }
         }
