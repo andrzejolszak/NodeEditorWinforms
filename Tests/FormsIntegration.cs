@@ -1,16 +1,9 @@
 using Avalonia.Headless.NUnit;
-using Avalonia.Rendering.SceneGraph;
 using AvaloniaEdit;
 using FluentAssertions;
-using Microsoft.Msagl.Core.Layout;
 using Moq;
 using NodeEditor;
 using NUnit.Framework;
-using NUnit.Framework.Internal;
-using System.Drawing;
-using System.Linq;
-using System.Windows.Forms;
-using Bitmap = System.Drawing.Bitmap;
 
 namespace Tests;
 

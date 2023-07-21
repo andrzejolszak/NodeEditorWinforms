@@ -55,52 +55,9 @@ namespace NodeEditor
             this._locationOffset = new Microsoft.Msagl.Core.Geometry.Point(x, y);
         }
 
-        public void Draw(Graphics g, Point mouseLocation, MouseButtons mouseButtons)
+        public Rect GetBounds()
         {
-            float x = (float)this.Location.X;
-            float y = (float)this.Location.Y;
-
-            var socketRect = new RectangleF(x, y, Width, Height);
-            var hover = socketRect.Contains(mouseLocation);
-
-            if (hover)
-            {
-                g.SmoothingMode = SmoothingMode.HighSpeed;
-                g.InterpolationMode = InterpolationMode.Low;
-
-                socketRect.Inflate(2, 0);
-                var fontBrush = Brushes.Blue;
-                if (Input)
-                {
-                    var sf = new StringFormat();
-                    sf.Alignment = StringAlignment.Near;
-                    sf.LineAlignment = StringAlignment.Center;
-                    g.DrawString(Name + ":" + CurriedValue, SystemFonts.SmallCaptionFont, fontBrush, new RectangleF(x, y - SocketHeight * 2, 1000, Height * 2), sf);
-                }
-                else
-                {
-                    var sf = new StringFormat();
-                    sf.Alignment = StringAlignment.Near;
-                    sf.LineAlignment = StringAlignment.Center;
-                    g.DrawString(Name + ":" + CurriedValue, SystemFonts.SmallCaptionFont, fontBrush, new RectangleF(x, y + SocketHeight, 1000, Height * 2), sf);
-                }
-            }
-
-            g.InterpolationMode = InterpolationMode.HighQualityBilinear;
-            g.SmoothingMode = SmoothingMode.HighQuality;
-
-            g.FillRectangle(this.CurriedValue == null ? Brushes.DarkGray : Brushes.Black, socketRect);
-            if (CurryDefault != null && Value == null)
-            {
-                g.FillRectangle(Brushes.PaleGoldenrod, socketRect);
-            }
-
-            g.DrawString(Type.Name.Substring(0, 1).ToLowerInvariant(), SystemFonts.SmallCaptionFont, Brushes.White, new RectangleF(x + 2, y - 6, Width * 2, Height * 2));
-        }
-
-        public RectangleF GetBounds()
-        {
-            return new RectangleF((float)this.Location.X, (float)this.Location.Y, Width, Height);
+            return new Rect(this.Location.X, this.Location.Y, Width, Height);
         }
 
         public void DrawAv(DrawingContext g, PointerPoint mouse)

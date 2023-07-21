@@ -18,12 +18,8 @@
 using System.Data;
 using System.Reflection;
 using AnimateForms.Core;
-using Avalonia.Controls;
-using Avalonia.Input;
-using Avalonia.Media.Immutable;
 using AvaloniaEdit;
 using Sharplog.KME;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.TextBox;
 
 namespace NodeEditor
 {
@@ -212,10 +208,10 @@ namespace NodeEditor
                 if (MainGraph.NodesTyped.Any(x => x.IsSelected))
                 {
                     var n = MainGraph.NodesTyped.FirstOrDefault(x => x.IsSelected);
-                    var bound = new Rect(new Avalonia.Point(n.X,n.Y), n.GetNodeBounds().ToAvSize());
+                    var bound = new Rect(new Avalonia.Point(n.X,n.Y), n.GetNodeBounds());
                     foreach (var node in MainGraph.NodesTyped.Where(x=>x.IsSelected))
                     {
-                        bound = bound.Union(new Rect(new Avalonia.Point(node.X, node.Y), node.GetNodeBounds().ToAvSize()));
+                        bound = bound.Union(new Rect(new Avalonia.Point(node.X, node.Y), node.GetNodeBounds()));
                     }
 
                     OnShowLocation(bound);
@@ -302,7 +298,7 @@ namespace NodeEditor
 
                 textEditor.Width = textEditor.MinWidth = (int)NodeVisual.NodeWidth - 4;
                 textEditor.Height = textEditor.MinHeight = (int)NodeVisual.HeaderHeight - 8;
-                textEditor.Background = new SolidColorBrush(newAutocompleteNode.NodeColor.ToAvColor());
+                textEditor.Background = new SolidColorBrush(newAutocompleteNode.NodeColorAv);
                 textEditor.BorderThickness = new Thickness(0);
                 textEditor.AttachedToVisualTree += (s, e) =>
                 {
@@ -341,54 +337,54 @@ namespace NodeEditor
             if (updateKind == PointerUpdateKind.RightButtonPressed)
             {
                 var node = MainGraph.NodesTyped.OrderByDescending(x => x.BoundingBox.LeftTop).FirstOrDefault(
-                        x => new Rect(new Avalonia.Point(x.X, x.Y), x.GetNodeBounds().ToAvSize()).Contains(this._lastMouseState.Position));
+                        x => new Rect(new Avalonia.Point(x.X, x.Y), x.GetNodeBounds()).Contains(this._lastMouseState.Position));
 
                 // TODO: need to use avalon context menu
-                var context = new ContextMenuStrip();
-                if (node != null || MainGraph.NodesTyped.Any(x => x.IsSelected))
-                {
-                    context.Items.Add("Delete Node(s)", null, ((o, args) =>
-                    {
-                        DeleteSelectedNodes(node);
-                    }));
-
-                    context.Items.Add("Duplicate Node(s)", null, ((o, args) =>
-                    {
-                        DuplicateSelectedNodes(node);
-                    }));
-
-                    context.Items.Add("Change Color ...", null, ((o, args) =>
-                    {
-                        ChangeSelectedNodesColor(node);
-                    }));
-
-                    if (MainGraph.NodesTyped.Count(x => x.IsSelected) == 2)
-                    {
-                        var sel = MainGraph.NodesTyped.Where(x => x.IsSelected).ToArray();
-                        context.Items.Add("Check Impact ???", null, ((o, args) =>
-                        {
-                            if (HasImpact(sel[0], sel[1]) || HasImpact(sel[1], sel[0]))
-                            {
-                                MessageBox.Show("One node has impact on other.", "Impact detected.", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                            }
-                            else
-                            {
-                                MessageBox.Show("These nodes not impacts themselves.", "No impact.", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                            }
-                        }));
-                    }
-
-                    context.Show((int)this._lastMouseState.Position.X, (int)this._lastMouseState.Position.Y);
-                }
-                else if (MainGraph.EdgesTyped.Any(x => x.IsHover))
-                {
-                    context.Items.Add("Delete Connection(s)", null, ((o, args) =>
-                    {
-                        DeleteHoveredConns();
-                    }));
-                }
-
-                context.Show((int)this._lastMouseState.Position.X, (int)this._lastMouseState.Position.Y);
+                // var context = new ContextMenuStrip();
+                // if (node != null || MainGraph.NodesTyped.Any(x => x.IsSelected))
+                // {
+                //     context.Items.Add("Delete Node(s)", null, ((o, args) =>
+                //     {
+                //         DeleteSelectedNodes(node);
+                //     }));
+                // 
+                //     context.Items.Add("Duplicate Node(s)", null, ((o, args) =>
+                //     {
+                //         DuplicateSelectedNodes(node);
+                //     }));
+                // 
+                //     context.Items.Add("Change Color ...", null, ((o, args) =>
+                //     {
+                //         ChangeSelectedNodesColor(node);
+                //     }));
+                // 
+                //     if (MainGraph.NodesTyped.Count(x => x.IsSelected) == 2)
+                //     {
+                //         var sel = MainGraph.NodesTyped.Where(x => x.IsSelected).ToArray();
+                //         context.Items.Add("Check Impact ???", null, ((o, args) =>
+                //         {
+                //             if (HasImpact(sel[0], sel[1]) || HasImpact(sel[1], sel[0]))
+                //             {
+                //                 MessageBox.Show("One node has impact on other.", "Impact detected.", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                //             }
+                //             else
+                //             {
+                //                 MessageBox.Show("These nodes not impacts themselves.", "No impact.", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                //             }
+                //         }));
+                //     }
+                // 
+                //     context.Show((int)this._lastMouseState.Position.X, (int)this._lastMouseState.Position.Y);
+                // }
+                // else if (MainGraph.EdgesTyped.Any(x => x.IsHover))
+                // {
+                //     context.Items.Add("Delete Connection(s)", null, ((o, args) =>
+                //     {
+                //         DeleteHoveredConns();
+                //     }));
+                // }
+                // 
+                // context.Show((int)this._lastMouseState.Position.X, (int)this._lastMouseState.Position.Y);
             }
             else if (updateKind == PointerUpdateKind.LeftButtonPressed)
             {
@@ -406,17 +402,17 @@ namespace NodeEditor
 
                 var node =
                     MainGraph.NodesTyped.OrderByDescending(x => x.BoundingBox.LeftTop).FirstOrDefault(
-                        x => new Rect(new Avalonia.Point(x.X, x.Y), x.GetNodeBounds().ToAvSize()).Contains(this._lastMouseState.Position));
+                        x => new Rect(new Avalonia.Point(x.X, x.Y), x.GetNodeBounds()).Contains(this._lastMouseState.Position));
 
                 if (!mdown && !IsRunMode)
                 {
                     var nodeWhole =
                     MainGraph.NodesTyped.OrderByDescending(x => x.BoundingBox.LeftTop).FirstOrDefault(
-                        x => new Rect(new Avalonia.Point(x.X, x.Y), x.GetNodeBounds().ToAvSize()).Contains(this._lastMouseState.Position));
+                        x => new Rect(new Avalonia.Point(x.X, x.Y), x.GetNodeBounds()).Contains(this._lastMouseState.Position));
                     if (nodeWhole != null)
                     {
                         node = nodeWhole;
-                        var socket = nodeWhole.GetSockets().All.FirstOrDefault(x => x.GetBounds().ToAvRect().Contains(this._lastMouseState.Position));
+                        var socket = nodeWhole.GetSockets().All.FirstOrDefault(x => x.GetBounds().Contains(this._lastMouseState.Position));
                         if (socket != null)
                         {
                             if (keyModifiers.HasFlag(KeyModifiers.Control))
@@ -538,7 +534,7 @@ namespace NodeEditor
                 var rect = MakeRect(selectionStart, selectionEnd, false);
                 foreach (NodeVisual x in MainGraph.Nodes)
                 {
-                    x.IsSelected = rect.Contains(new Rect(new Avalonia.Point(x.X, x.Y), x.GetNodeBounds().ToAvSize()));
+                    x.IsSelected = rect.Contains(new Rect(new Avalonia.Point(x.X, x.Y), x.GetNodeBounds()));
                 }
 
                 selectionStart = default;
@@ -548,10 +544,10 @@ namespace NodeEditor
             {
                 var nodeWhole =
                     MainGraph.NodesTyped.OrderByDescending(x => x.BoundingBox.LeftTop).FirstOrDefault(
-                        x => new Rect(new Avalonia.Point(x.X, x.Y), x.GetNodeBounds().ToAvSize()).Contains(this._lastMouseState.Position));
+                        x => new Rect(new Avalonia.Point(x.X, x.Y), x.GetNodeBounds()).Contains(this._lastMouseState.Position));
                 if (nodeWhole != null)
                 {
-                    var socket = nodeWhole.GetSockets().All.FirstOrDefault(x => x.GetBounds().ToAvRect().Contains(this._lastMouseState.Position));
+                    var socket = nodeWhole.GetSockets().All.FirstOrDefault(x => x.GetBounds().Contains(this._lastMouseState.Position));
                     if (socket != null)
                     {
                         if (IsConnectable(dragSocket,socket) && dragSocket.Input != socket.Input)
@@ -653,7 +649,7 @@ namespace NodeEditor
                     if (inst is Avalonia.Controls.Control asCtrl)
                     {
                         replacementNode.CustomEditorAv = asCtrl;
-                        asCtrl[Avalonia.Controls.TextBox.BackgroundProperty] = new Avalonia.Media.SolidColorBrush(newAutocompleteNode.NodeColor.ToAvColor());
+                        asCtrl[Avalonia.Controls.TextBox.BackgroundProperty] = new Avalonia.Media.SolidColorBrush(newAutocompleteNode.NodeColorAv);
                         (this.Content as Avalonia.Controls.Canvas).Children.Add(asCtrl);
                     }
 
@@ -677,15 +673,15 @@ namespace NodeEditor
         {
             NodeVisual[] selected = MainGraph.NodesTyped.Where(x => x.IsSelected).Concat(new[] { node }).Where(x => x != null).ToArray();
 
-            ColorDialog cd = new ColorDialog();
-            cd.FullOpen = true;
-            if (cd.ShowDialog() == DialogResult.OK)
-            {
-                foreach (var n in selected)
-                {
-                    n.NodeColor = cd.Color;
-                }
-            }
+            // ColorDialog cd = new ColorDialog();
+            // cd.FullOpen = true;
+            // if (cd.ShowDialog() == DialogResult.OK)
+            // {
+            //     foreach (var n in selected)
+            //     {
+            //         n.NodeColor = cd.Color;
+            //     }
+            // }
 
             InvalidateVisual();
             needRepaint = true;

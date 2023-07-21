@@ -28,7 +28,6 @@ namespace NodeEditor
         public NodeVisual OwnerNode { get; set; }
         private const int HoverThrottlingMs = 10;
         internal KDTree<float, NodeConnection> KdTree = null;
-        private List<(NodeConnection, PointF[])> _points = new List<(NodeConnection, PointF[])>();
         private List<(NodeConnection, Avalonia.Point[])> _pointsAv = new List<(NodeConnection, Avalonia.Point[])>();
         private float _pointsChecksum = 0;
         private bool _treeRecalc = false;
@@ -40,67 +39,6 @@ namespace NodeEditor
         public IEnumerable<NodeConnection> EdgesTyped => this.Edges.Cast<NodeConnection>();
 
         public string GUID = Guid.NewGuid().ToString();
-
-        public void Draw(Graphics g, Point mouseLocation, MouseButtons mouseButtons, bool isRunMode, Animate animate)
-        {
-            g.InterpolationMode = InterpolationMode.Low;
-            g.SmoothingMode = SmoothingMode.HighSpeed;
-
-            g.FillRectangle(new SolidBrush(Color.FromArgb(220, Color.White)), g.ClipBounds);
-
-            var orderedNodes = Nodes.OrderBy(x => x.BoundingBox.LeftTop);
-            foreach (var node in orderedNodes)
-            {
-                (node as NodeVisual).Draw(g, mouseLocation, mouseButtons, isRunMode);
-            }
-
-            if (KdTree != null && !_hoverRecalc)
-            {
-                _hoverRecalc = true;
-                Task.Run(() =>
-                {
-                    _hoverConnection = KdTree.RadialSearch(new float[] { mouseLocation.X, mouseLocation.Y }, 50, 1).FirstOrDefault()?.Item2;
-                    Task.Delay(HoverThrottlingMs);
-                    _hoverRecalc = false;
-                });
-            }
-
-            _points.Clear();
-
-            foreach (NodeConnection connection in this.Edges)
-            {
-                bool isHover = connection == _hoverConnection;
-                PointF[] points = connection.Draw(g, isHover, isRunMode, animate);
-                _points.Add((connection, points));
-            }
-
-            float newChecksum = this._points.SelectMany(x => x.Item2).Sum(x => x.X);
-            if (newChecksum != _pointsChecksum && !_treeRecalc)
-            {
-                _treeRecalc = true;
-                _pointsChecksum = newChecksum;
-                Task.Run(() =>
-                {
-                    (NodeConnection, PointF[])[] pointsCopy = _points.ToArray();
-                    float[][] points = pointsCopy.SelectMany(x => x.Item2.Select(y => (x.Item1, new float[] { y.X, y.Y }))).Select(x => x.Item2).ToArray();
-                    NodeConnection[] conns = pointsCopy.SelectMany(x => x.Item2.Select(y => (x.Item1, new float[] { y.X, y.Y }))).Select(x => x.Item1).ToArray();
-                    KdTree = new KDTree<float, NodeConnection>(2, points, conns, (x, y) =>
-                    {
-                        float dist = 0f;
-                        for (int i = 0; i < x.Length; i++)
-                        {
-                            dist += (x[i] - y[i]) * (x[i] - y[i]);
-                        }
-
-                        return dist;
-                    });
-
-                    Task.Delay(HoverThrottlingMs);
-
-                    _treeRecalc = false;
-                });
-            }
-        }
 
         public void DrawAv(DrawingContext g, PointerPoint mouse, bool isRunMode, Animate animate, double width, double height)
         {           
@@ -289,7 +227,7 @@ namespace NodeEditor
             bw.Write(node.SubsystemGraph?.GUID ?? "");
             bw.Write(8); //additional data size per node
             bw.Write(node.Int32Tag);
-            bw.Write(node.NodeColor.ToArgb());
+            bw.Write(node.NodeColorAv.ToUInt32());
         }
 
         public static (NodeVisual, string) DeserializeNode(BinaryReader br, INodesContext context)
@@ -325,7 +263,7 @@ namespace NodeEditor
                 loadedNode.Int32Tag = br.ReadInt32();
                 if (additional >= 8)
                 {
-                    loadedNode.NodeColor = Color.FromArgb(br.ReadInt32());
+                    loadedNode.NodeColorAv = Color.FromUInt32(br.ReadUInt32());
                 }
             }
             if (additional > 8)
@@ -335,23 +273,17 @@ namespace NodeEditor
 
             if (customEditor != "")
             {
-                if (customEditor == "System.Windows.Forms.Label")
+                if (customEditor == "Avalonia.Controls.Label" || customEditor == "System.Windows.Forms.Label")
                 {
-                    loadedNode.CustomEditor = new Label();
+                    loadedNode.CustomEditorAv = new Avalonia.Controls.Label();
                 }
-                else if (customEditor == "System.Windows.Forms.TextBox")
+                else if (customEditor == "Avalonia.Controls.TextBox" || customEditor == "System.Windows.Forms.TextBox")
                 {
-                    loadedNode.CustomEditor = new TextBox();
+                    loadedNode.CustomEditorAv = new TextBox();
                 }
                 else
                 {
-                    loadedNode.CustomEditor = Activator.CreateInstance(customEditorAssembly, customEditor).Unwrap() as Control;
-                }
-
-                Control ctrl = loadedNode.CustomEditor;
-                if (ctrl != null)
-                {
-                    ctrl.BackColor = loadedNode.NodeColor;
+                    loadedNode.CustomEditorAv = Activator.CreateInstance(customEditorAssembly, customEditor).Unwrap() as Control;
                 }
 
                 loadedNode.LayoutEditor();

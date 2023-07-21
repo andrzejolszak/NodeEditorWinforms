@@ -1,22 +1,5 @@
-﻿global using Brush = System.Drawing.Brush;
-global using Color = System.Drawing.Color;
-global using Control = System.Windows.Forms.Control;
-global using FontFamily = System.Drawing.FontFamily;
-global using LinearGradientBrush = System.Drawing.Drawing2D.LinearGradientBrush;
-global using Pen = System.Drawing.Pen;
-global using Point = System.Drawing.Point;
-global using Rectangle = System.Drawing.Rectangle;
-global using ScrollEventArgs = System.Windows.Forms.ScrollEventArgs;
-global using Size = System.Drawing.Size;
-global using ToolTip = System.Windows.Forms.ToolTip;
-global using UserControl = System.Windows.Forms.UserControl;
-global using Label = System.Windows.Forms.Label;
-global using KeyEventArgs = System.Windows.Forms.KeyEventArgs;
-global using ScrollEventType = System.Windows.Forms.ScrollEventType;
-global using TextBox = System.Windows.Forms.TextBox;
-global using Image = System.Drawing.Image;
-global using Brushes = System.Drawing.Brushes;
-using Avalonia;
+﻿using Avalonia;
+using Avalonia.Media;
 using AvaloniaEdit.Utils;
 
 public static class AvaloniaUtils
@@ -28,10 +11,6 @@ public static class AvaloniaUtils
     public static readonly Avalonia.Media.Pen BlackPen2 = new Avalonia.Media.Pen(Avalonia.Media.Brushes.Black, 2);
 
     public static readonly Lazy<Avalonia.Input.Cursor> CursorHand = new Lazy<Avalonia.Input.Cursor>(() => Avalonia.Input.Cursor.Parse("Hand"));
-
-    public static Rect ToAvRect(this RectangleF self) => new Rect(self.X, self.Y, self.Width, self.Height);
-    public static Avalonia.Size ToAvSize(this SizeF self) => new Avalonia.Size(self.Width, self.Height);
-    public static Avalonia.Media.Color ToAvColor(this Color self) => new Avalonia.Media.Color(self.A, self.R, self.G, self.B);
     public static Rect PixelAlign(this Rect self) => PixelSnapHelpers.PixelAlign(self, new Avalonia.Size(1, 1));
     public static Avalonia.Point PixelAlign(this Avalonia.Point self) => new Avalonia.Point(PixelSnapHelpers.PixelAlign(self.X, 1), PixelSnapHelpers.PixelAlign(self.Y, 1));
 

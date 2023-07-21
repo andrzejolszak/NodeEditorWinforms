@@ -1,18 +1,1 @@
-﻿global using Brush = System.Drawing.Brush;
-global using Color = System.Drawing.Color;
-global using Control = System.Windows.Forms.Control;
-global using FontFamily = System.Drawing.FontFamily;
-global using LinearGradientBrush = System.Drawing.Drawing2D.LinearGradientBrush;
-global using Pen = System.Drawing.Pen;
-global using Point = System.Drawing.Point;
-global using Rectangle = System.Drawing.Rectangle;
-global using ScrollEventArgs = System.Windows.Forms.ScrollEventArgs;
-global using Size = System.Drawing.Size;
-global using ToolTip = System.Windows.Forms.ToolTip;
-global using UserControl = System.Windows.Forms.UserControl;
-global using Label = System.Windows.Forms.Label;
-global using KeyEventArgs = System.Windows.Forms.KeyEventArgs;
-global using ScrollEventType = System.Windows.Forms.ScrollEventType;
-global using TextBox = System.Windows.Forms.TextBox;
-global using Image = System.Drawing.Image;
-global using Brushes = System.Drawing.Brushes;
+﻿

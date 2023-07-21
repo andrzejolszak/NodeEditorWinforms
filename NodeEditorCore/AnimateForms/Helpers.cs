@@ -27,7 +27,7 @@ namespace AnimateForms.Core
 
             HSV hsv = new HSV
             {
-                Hue = rgb.GetHue(),
+                Hue = (float)rgb.ToHsv().H,
                 Saturation = (max == 0) ? 0 : 1f - (1f * min / max),
                 Value = max / 255f
             };
@@ -43,9 +43,9 @@ namespace AnimateForms.Core
 
         public static Color HSVtoRGB(HSV hsv)
         {
-            return Color.FromArgb((int)(HSVtoRGBHelper(hsv.Hue, hsv.Saturation, hsv.Value, 5) * 255),
-                                  (int)(HSVtoRGBHelper(hsv.Hue, hsv.Saturation, hsv.Value, 3) * 255),
-                                  (int)(HSVtoRGBHelper(hsv.Hue, hsv.Saturation, hsv.Value, 1) * 255));
+            return Color.FromRgb((byte)(HSVtoRGBHelper(hsv.Hue, hsv.Saturation, hsv.Value, 5) * 255),
+                                  (byte)(HSVtoRGBHelper(hsv.Hue, hsv.Saturation, hsv.Value, 3) * 255),
+                                  (byte)(HSVtoRGBHelper(hsv.Hue, hsv.Saturation, hsv.Value, 1) * 255));
         }
     }
 }

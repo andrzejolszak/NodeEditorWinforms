@@ -57,10 +57,8 @@ namespace NodeEditor
         public bool IsSelected { get; set; }
         public bool InvokeOnLoad { get; set; }
         public FeedbackType Feedback { get; set; }
-        public Control CustomEditor { get; set; }
         public Avalonia.Controls.Control CustomEditorAv { get; set; }
         public string GUID = Guid.NewGuid().ToString();
-        public Color NodeColor = Color.FromArgb(0xFF, 0xF8, 0xF8, 0xFF);
         public Avalonia.Media.Color NodeColorAv = Avalonia.Media.Color.FromArgb(0xFF, 0xF8, 0xF8, 0xFF);
 
         private List<SocketVisual> _inputSocketsCache;
@@ -277,112 +275,43 @@ namespace NodeEditor
         /// <summary>
         /// Returns current size of the node.
         /// </summary>        
-        public SizeF GetNodeBounds()
+        public Size GetNodeBounds()
         {
             if (this.BoundingBox.Width != 0 && this.BoundingBox.Height != 0)
             {
-                return new SizeF((float)this.BoundingBox.Width, (float)this.BoundingBox.Height);
+                return new Size(this.BoundingBox.Width, this.BoundingBox.Height);
             }
 
-            var csize = new SizeF();
-            if (CustomEditor != null && CustomEditor.ClientSize != default && this.Name != NewSpecialNodeName)
-            {
-                csize = new SizeF(CustomEditor.ClientSize.Width, CustomEditor.ClientSize.Height + HeaderHeight + 8 + SocketVisual.SocketHeight);                
-            }
+            var csize = new Size(0, 0);
 
-            if (CustomEditorAv != null && this.Name != NewSpecialNodeName)
+            if (CustomEditorAv != null && this.Name != NewSpecialNodeName && CustomEditorAv.Width > 0 && CustomEditorAv.Height > 0)
             {
-                csize = new SizeF((float)CustomEditorAv.Width, (float)(CustomEditorAv.Height + HeaderHeight + 8 + SocketVisual.SocketHeight));
+                csize = new Size((float)CustomEditorAv.Width, (float)(CustomEditorAv.Height + HeaderHeight + 8 + SocketVisual.SocketHeight));
             }
 
             var h = HeaderHeight;
 
-            csize.Width = Math.Max(csize.Width, NodeWidth);
-            csize.Height = Math.Max(csize.Height, h);
+            csize = new Size(Math.Max(csize.Width, NodeWidth), Math.Max(csize.Height, h));
 
-            if(CustomWidth >= 0)
+            if (CustomWidth >= 0)
             {
-                csize.Width = CustomWidth;
+                csize = csize.WithWidth(CustomWidth);
             }
 
             if(CustomHeight >= 0)
             {
-                csize.Height = CustomHeight;
+                csize = csize.WithHeight(CustomHeight);
             }
 
             this.BoundaryCurve = CurveFactory.CreateRectangle(new Microsoft.Msagl.Core.Geometry.Rectangle(this.BoundingBox.Left, this.BoundingBox.Bottom, new Microsoft.Msagl.Core.Geometry.Point(csize.Width, csize.Height)));
 
-            return new SizeF((float)this.BoundingBox.Width, (float)this.BoundingBox.Height);
+            return new Size((float)this.BoundingBox.Width, (float)this.BoundingBox.Height);
 ;
-        }
-
-        /// <summary>
-        /// Allows node to be drawn on given Graphics context.       
-        /// </summary>
-        /// <param name="g">Graphics context.</param>
-        /// <param name="mouseLocation">Location of the mouse relative to NodesControl instance.</param>
-        /// <param name="mouseButtons">Mouse buttons that are pressed while drawing node.</param>
-        public void Draw(Graphics g, Point mouseLocation, MouseButtons mouseButtons, bool isRunMode)
-        {
-            var rect = new RectangleF(new PointF((float)this.X, (float)this.Y), GetNodeBounds());
-
-            // Draw shadow
-            bool isHover = rect.Contains(mouseLocation);
-            int offset = isHover ? 6 : 4;
-            g.FillRectangle(Brushes.DarkGray, new RectangleF(new PointF(this.X + offset, this.Y + offset), rect.Size));
-            
-            var feedrect = rect;
-            feedrect.Inflate(10, 10);
-
-            if (Feedback == FeedbackType.Warning)
-            {
-                g.DrawRectangle(new Pen(Color.Yellow, 3), Rectangle.Round(feedrect));
-            }
-            else if (Feedback == FeedbackType.Error)
-            {
-                g.DrawRectangle(new Pen(Color.Red, 3), Rectangle.Round(feedrect));
-            }
-
-            Color fillColor = NodeColor;
-
-            if (IsSelected && !isRunMode)
-            {
-                fillColor = Color.PaleGoldenrod;
-            }
-
-            g.FillRectangle(new SolidBrush(fillColor), rect);
-
-            if (this.CustomEditor != null && (
-                this.CustomEditor.BackColor == NodeColor 
-                || this.CustomEditor.BackColor == Color.White 
-                || this.CustomEditor.BackColor == Color.PaleGoldenrod 
-                || this.CustomEditor.BackColor == SystemColors.Control 
-                || this.CustomEditor.BackColor == SystemColors.Window))
-            {
-                this.CustomEditor.BackColor = fillColor;
-            }
-
-            g.DrawRectangle(Pens.Black, Rectangle.Round(rect));
-
-            if (this.IsInteractive)
-            {
-                g.DrawLine(Pens.Black, rect.X + rect.Width - 5, rect.Y, rect.X + rect.Width - 5, rect.Y + rect.Height);
-            }
-
-            if (this.Name != NewSpecialNodeName)
-            {
-                g.DrawString(Name, SystemFonts.DefaultFont, Brushes.Black, new PointF((float)this.X + 3, (float)this.Y + HeaderHeight / 4));
-            }
-
-            foreach (var socet in GetSockets().All)
-            {
-                socet.Draw(g, mouseLocation, mouseButtons);
-            }
         }
 
         public void DrawAv(DrawingContext g, PointerPoint mouse, bool isRunMode)
         {
-            var rect = new Rect(new Avalonia.Point((float)X, (float)Y), GetNodeBounds().ToAvSize()).PixelAlign();
+            var rect = new Rect(new Avalonia.Point((float)X, (float)Y), GetNodeBounds()).PixelAlign();
 
             // Draw shadow
             bool isHover = rect.Contains(mouse.Position);
@@ -450,25 +379,23 @@ namespace NodeEditor
                 }
             }
 
-            Color orgColor = this.NodeColor;
+            Color orgColor = this.NodeColorAv;
             _ = animate.Recolor(
                 this.GUID,
                 orgColor,
                 x =>
                 {
-                    this.NodeColor = x;
-                    this.NodeColorAv = Avalonia.Media.Color.FromUInt32((uint)x.ToArgb());
+                    this.NodeColorAv = x;
                 },
                 Easings.ExpIn,
                 50,
-                Color.Gold).ContinueWith(
+                Colors.Gold).ContinueWith(
                     t => animate.Recolor(
                         this.GUID,
-                        this.NodeColor,
+                        this.NodeColorAv,
                         y =>
                         {
-                            this.NodeColor = y;
-                            this.NodeColorAv = Avalonia.Media.Color.FromUInt32((uint)y.ToArgb());
+                            this.NodeColorAv = y;
                         },
                         Easings.CubicOut,
                         100,
@@ -478,18 +405,6 @@ namespace NodeEditor
 
         public void LayoutEditor()
         {
-            if (CustomEditor != null)
-            {
-                if (this.Name == NewSpecialNodeName)
-                {
-                    CustomEditor.Location = new Point((int)this.X + 4, (int)this.Y + 8);
-                }
-                else
-                {
-                    CustomEditor.Location = new Point((int)(this.X + 4), (int)(this.Y + HeaderHeight + 4));
-                }
-            }
-
             if (CustomEditorAv != null)
             {
                 if (this.Name == NewSpecialNodeName)

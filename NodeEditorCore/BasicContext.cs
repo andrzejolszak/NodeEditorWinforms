@@ -22,9 +22,6 @@ namespace NodeEditor
         [Node(customEditor: typeof(Avalonia.Controls.Label))]
         public void ShowMessageBox(object bang, object x)
         {
-            if (this.CurrentProcessingNode.CustomEditor is not null)
-                this.CurrentProcessingNode.CustomEditor.Text = x?.ToString() ?? "NULL";
-
             if (this.CurrentProcessingNode.CustomEditorAv is not null)
                 (this.CurrentProcessingNode.CustomEditorAv as Avalonia.Controls.Label).Content = x?.ToString() ?? "NULL";
         }
@@ -45,12 +42,6 @@ namespace NodeEditor
 
             bangOut = bangIn;
             this.CurrentProcessingNode.UserData = (bool)this.CurrentProcessingNode.UserData ? false : true;
-
-            if (this.CurrentProcessingNode.CustomEditor is not null)
-            {
-                this.CurrentProcessingNode.CustomEditor.Text = " ";
-                this.CurrentProcessingNode.CustomEditor.BackColor = (bool)this.CurrentProcessingNode.UserData ? Color.Green : Color.Red;
-            }
 
             if (this.CurrentProcessingNode.CustomEditorAv is not null)
             {

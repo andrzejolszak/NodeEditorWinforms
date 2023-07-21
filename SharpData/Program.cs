@@ -14,19 +14,6 @@ namespace MathSample
             MainAvalonia();
         }
 
-        static void MainWinForm()
-        {
-            System.Windows.Forms.Application.EnableVisualStyles();
-            System.Windows.Forms.Application.SetCompatibleTextRenderingDefault(false);
-
-            MathContext context = new MathContext();
-            NodesGraph[] graphs = NodesGraph.Deserialize(File.ReadAllBytes("..\\..\\..\\default.nds"), context);
-            FormMathSample gui = new FormMathSample(context, graphs[0], null);
-            // gui.FormClosing += (e, s) => File.WriteAllBytes("..\\..\\..\\default.nds", NodesGraph.Serialize(gui.mainGraph));
-
-            System.Windows.Forms.Application.Run(gui);
-        }
-
         static int MainAvalonia()
         {
             /// Drawing with layers, e.g. CaretLayer
@@ -38,13 +25,13 @@ namespace MathSample
                 NodesGraph[] graphs = NodesGraph.Deserialize(File.ReadAllBytes("..\\..\\..\\default.nds"), context);
                 foreach(NodeVisual node in graphs[0].Nodes)
                 {
-                    if (node.CustomEditor is Label asLabel)
-                    {
-                        node.CustomEditorAv = new Avalonia.Controls.Label() { Content = asLabel.Text, Background = Avalonia.Media.Brushes.Transparent };
-                        node.CustomEditorAv.Height = node.CustomEditorAv.MinHeight = node.CustomEditor.Height;
-                        node.CustomEditorAv.Width = node.CustomEditorAv.MinWidth = node.CustomEditor.Width;
-                        node.CustomEditor = null;
-                    }
+                    // if (node.CustomEditor is Label asLabel)
+                    // {
+                    //     node.CustomEditorAv = new Avalonia.Controls.Label() { Content = asLabel.Text, Background = Avalonia.Media.Brushes.Transparent };
+                    //     node.CustomEditorAv.Height = node.CustomEditorAv.MinHeight = node.CustomEditor.Height;
+                    //     node.CustomEditorAv.Width = node.CustomEditorAv.MinWidth = node.CustomEditor.Width;
+                    //     node.CustomEditor = null;
+                    // }
                 }
 
                 NodesControlAv control = new NodesControlAv(null);
@@ -65,7 +52,6 @@ namespace MathSample
                 window.Closed += (e, s) =>
                 {
                     // File.WriteAllBytes("..\\..\\..\\default.nds", NodesGraph.Serialize(control.MainGraph));
-                    System.Windows.Forms.Application.Exit();
                 };
 
                 control.Unloaded += (e, s) =>
