@@ -82,8 +82,6 @@ namespace NodeEditor
         /// </summary>
         public event Action<Rect> OnShowLocation = delegate { };
 
-        private Avalonia.Point lastMouseLocation;
-
         private Avalonia.Point selectionStart;
 
         private Avalonia.Point selectionEnd;
@@ -266,7 +264,7 @@ namespace NodeEditor
                     return;
                 }
 
-                var newAutocompleteNode = new NodeVisual(NodeVisual.NewSpecialNodeName, lastMouseLocation.X, lastMouseLocation.Y - NodeVisual.HeaderHeight)
+                var newAutocompleteNode = new NodeVisual(NodeVisual.NewSpecialNodeName, this._lastMouseState.Position.X, this._lastMouseState.Position.Y - NodeVisual.HeaderHeight)
                 {
                     IsInteractive = false,
                     CustomWidth = -1,
