@@ -21,6 +21,7 @@ using System.Drawing.Drawing2D;
 
 namespace NodeEditor
 {
+    [DebuggerDisplay("I={Input}, {Name} = {Value}")]
     public class SocketVisual : RelativeFloatingPort
     {
         public const float SocketHeight = 8;

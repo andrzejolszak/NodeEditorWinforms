@@ -22,7 +22,7 @@ namespace NodeEditor
     /// </summary>
     public enum FeedbackType
     {
-        Debug,
+        None,
         Information,
         Warning,
         Error,

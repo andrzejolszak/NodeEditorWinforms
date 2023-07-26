@@ -28,7 +28,8 @@ using RoundedRect = Microsoft.Msagl.Core.Geometry.Curves.RoundedRect;
 using NXUI.Extensions;
 
 namespace NodeEditor
-{    
+{
+    [DebuggerDisplay("{OutputSocketName}->{InputSocketName}")]
     public class NodeConnection : Edge
     {
         public NodeVisual OutputNode => this.Source as NodeVisual;
@@ -303,7 +304,7 @@ namespace NodeEditor
         public void PropagateValue(INodesContext context, Animate animate)
         {
             bool isUpdate = this.InputSocket.Value != this.OutputSocket.Value;
-            if (!(this.OutputSocket.Value is Bang && this.InputSocket.Type != typeof(Bang)))
+            if (!(this.OutputSocket.Value is Bang && this.InputSocket.Type != typeof(Bang) && this.InputSocket.Type != typeof(object)))
             {
                 this.InputSocket.Value = this.OutputSocket.Value;
             }

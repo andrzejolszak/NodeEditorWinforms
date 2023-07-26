@@ -1,11 +1,4 @@
-﻿using AnimateForms.Core;
-using NodeEditor;
-using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using static AnimateForms.Core.Animate;
+﻿using NodeEditor;
 
 namespace MathSample
 {
@@ -24,7 +17,7 @@ namespace MathSample
 
         private void FormMathSample_FormClosing(object sender)
         {
-            owner?.ResetSocketsCache();
+            // owner?.ResetSocketsCache();
         }
 
         private void FormMathSample_Load(object sender, EventArgs e)

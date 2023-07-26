@@ -119,12 +119,9 @@ namespace NodeEditor
 
         private void ContextOnFeedbackInfo(string message, NodeVisual nodeVisual, FeedbackType type, object tag, bool breakExecution)
         {
+            nodeVisual.Feedback = type;
             this.breakExecution = breakExecution;
-            if (breakExecution)
-            {
-                nodeVisual.Feedback = type;
-                OnNodeHint(message);
-            }
+            OnNodeHint(message);
         }
 
         public void TimerOnTick(object sender, EventArgs eventArgs)
@@ -252,7 +249,9 @@ namespace NodeEditor
 
             if (clickCount == 2)
             {
-                NodeVisual selectedNode = MainGraph.NodesTyped.FirstOrDefault(x => x.IsSelected);
+                var selectedNode = MainGraph.NodesTyped.OrderByDescending(x => x.BoundingBox.LeftTop).FirstOrDefault(
+                    x => new Rect(new Avalonia.Point(x.X, x.Y), x.GetNodeBounds()).Contains(this._lastMouseState.Position));
+
                 if (selectedNode?.SubsystemGraph != null)
                 {
                     this.OnSubgraphOpenRequest?.Invoke(selectedNode);
@@ -600,6 +599,7 @@ namespace NodeEditor
 
                 replacementNode = new NodeVisual(NodeVisual.NewSubsystemInletNodeNamePrefix + " " + name, newAutocompleteNode.X, newAutocompleteNode.Y);
                 replacementNode.OwnerGraph = MainGraph;
+                replacementNode.OwnerGraph.OwnerNode?.ResetSocketsCache();
             }
             else if (text.StartsWith(NodeVisual.NewSubsystemOutletNodeNamePrefix))
             {
@@ -611,6 +611,7 @@ namespace NodeEditor
 
                 replacementNode = new NodeVisual(NodeVisual.NewSubsystemOutletNodeNamePrefix + " " + name, newAutocompleteNode.X, newAutocompleteNode.Y);
                 replacementNode.OwnerGraph = MainGraph;
+                replacementNode.OwnerGraph.OwnerNode?.ResetSocketsCache();
             }
             else
             {
@@ -827,7 +828,7 @@ namespace NodeEditor
                 }
 
                 NodeVisual init = nodeQueue.Pop();
-                init.Feedback = FeedbackType.Debug;
+                init.Feedback = FeedbackType.None;
 
                 try
                 {
@@ -838,7 +839,7 @@ namespace NodeEditor
                     init.Feedback = FeedbackType.Error;
                 }
 
-                foreach (var connection in MainGraph.EdgesTyped)
+                foreach (var connection in init.OwnerGraph.EdgesTyped)
                 {
                     if (connection.OutputNode != init)
                     {
@@ -848,7 +849,7 @@ namespace NodeEditor
                     connection.PropagateValue(Context, this.Animate);
                 }
 
-                foreach (var connection in MainGraph.EdgesTyped.Where(x => x.OutputNode == init && x.OutputSocket.Value != null))
+                foreach (var connection in init.OwnerGraph.EdgesTyped.Where(x => x.OutputNode == init && x.OutputSocket.Value != null))
                 {
                     if (connection.InputSocket.HotInput)
                     {
@@ -858,7 +859,7 @@ namespace NodeEditor
                             inlet.GetSockets().Outputs.Single().Value = connection.InputSocket.Value;
                             nodeQueue.Push(inlet);
                         }
-                        else if (connection.InputNode.Type == NodeVisual.NodeType.Outlet)
+                        else if (connection.InputNode.Type == NodeVisual.NodeType.SubsystemOutlet)
                         {
                             SocketVisual subsystemOutput = connection.InputNode.OwnerGraph.OwnerNode.GetSockets().Outputs.Single(x => x.Name == connection.InputNode.Name);
                             subsystemOutput.Value = connection.InputSocket.Value;

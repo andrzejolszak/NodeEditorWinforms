@@ -54,10 +54,6 @@ namespace MathSample
                     File.WriteAllBytes("..\\..\\..\\default.nds", NodesGraph.Serialize(control.MainGraph));
                 };
 
-                control.Unloaded += (e, s) =>
-                {
-                    control.Owner?.ResetSocketsCache();
-                };
                 control.AttachedToVisualTree += (e, s) =>
                 {
                     control.Initialize(context, graphs[0]);

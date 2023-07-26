@@ -16,9 +16,6 @@
  */
 
 using AnimateForms.Core;
-using Avalonia.Media;
-using AvaloniaEdit.Rendering;
-using AvaloniaEdit.Utils;
 using Microsoft.Msagl.Core.Geometry.Curves;
 using Microsoft.Msagl.Core.Layout;
 using System.Reflection;
@@ -29,6 +26,7 @@ namespace NodeEditor
     /// <summary>
     /// Class that represents one instance of node.
     /// </summary>
+    [DebuggerDisplay("{Name}")]
     public class NodeVisual : Node
     {
         public enum NodeType
@@ -36,8 +34,8 @@ namespace NodeEditor
             Normal,
             New,
             Subsystem,
-            Inlet,
-            Outlet
+            SubsystemInlet,
+            SubsystemOutlet
         }
 
         public const string NewSpecialNodeName = "*new*";
@@ -85,7 +83,7 @@ namespace NodeEditor
 
         internal NodeVisual(string name, double x0, double y0) : base(new RoundedRect(new Microsoft.Msagl.Core.Geometry.Rectangle(x0, y0, x0, y0), 1, 1))
         {
-            this.Feedback = FeedbackType.Debug;
+            this.Feedback = FeedbackType.None;
             this.Name = name;
             
             if (name == NewSpecialNodeName)
@@ -98,11 +96,11 @@ namespace NodeEditor
             }
             else if (name.StartsWith(NewSubsystemInletNodeNamePrefix))
             {
-                this.Type = NodeType.Inlet;
+                this.Type = NodeType.SubsystemInlet;
             }
             else if (name.StartsWith(NewSubsystemOutletNodeNamePrefix))
             {
-                this.Type = NodeType.Outlet;
+                this.Type = NodeType.SubsystemOutlet;
             }
             else
             {
@@ -130,7 +128,7 @@ namespace NodeEditor
 
             if (MethodInf is null)
             {
-                if (this.Type == NodeType.Inlet)
+                if (this.Type == NodeType.SubsystemInlet)
                 {
                     SocketVisual outSocket = new SocketVisual(this);
                     outSocket.Type = typeof(object);
@@ -138,7 +136,7 @@ namespace NodeEditor
                     outputSocketList.Add(outSocket);
                     allSocketsList.Add(outSocket);
                 }
-                else if (this.Type == NodeType.Outlet)
+                else if (this.Type == NodeType.SubsystemOutlet)
                 {
                     SocketVisual inSocket = new SocketVisual(this);
                     inSocket.Type = typeof(object);
@@ -154,12 +152,12 @@ namespace NodeEditor
                     // TODO: hot sockets
                     // TODO: probably create new socket objects?
                     // TOOD: clean connections? or refer only by name?
-                    float inlParamsCount = this.SubsystemGraph.Nodes.Cast<NodeVisual>().Count(x => x.Type == NodeType.Inlet);
-                    float outlParamsCount = this.SubsystemGraph.Nodes.Cast<NodeVisual>().Count(x => x.Type == NodeType.Outlet);
+                    float inlParamsCount = this.SubsystemGraph.Nodes.Cast<NodeVisual>().Count(x => x.Type == NodeType.SubsystemInlet);
+                    float outlParamsCount = this.SubsystemGraph.Nodes.Cast<NodeVisual>().Count(x => x.Type == NodeType.SubsystemOutlet);
 
                     foreach (NodeVisual sn in this.SubsystemGraph.Nodes)
                     {
-                        if (sn.Type == NodeType.Inlet)
+                        if (sn.Type == NodeType.SubsystemInlet)
                         {
                             SocketVisual newInPassthrough = new SocketVisual(this)
                             {
@@ -171,7 +169,7 @@ namespace NodeEditor
                             inputSocketList.Add(newInPassthrough);
                             allSocketsList.Add(newInPassthrough);
                         }
-                        else if (sn.Type == NodeType.Outlet)
+                        else if (sn.Type == NodeType.SubsystemOutlet)
                         {
                             SocketVisual newOutPassthrough = new SocketVisual(this)
                             {
