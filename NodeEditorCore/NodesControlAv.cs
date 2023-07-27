@@ -378,17 +378,16 @@ namespace NodeEditor
 
                 Focus();
 
-                if (keyModifiers.HasFlag(KeyModifiers.Shift))
+                var node = MainGraph.NodesTyped.OrderByDescending(x => x.BoundingBox.LeftTop).FirstOrDefault(
+                    x => new Rect(new Point(x.X, x.Y), x.GetNodeBounds()).Contains(this._lastMouseState.Position));
+
+                if (!keyModifiers.HasFlag(KeyModifiers.Control) && node?.IsSelected != true)
                 {
                     foreach(NodeVisual n in MainGraph.Nodes)
                     {
                         n.IsSelected = false;
                     }
                 }
-
-                var node =
-                    MainGraph.NodesTyped.OrderByDescending(x => x.BoundingBox.LeftTop).FirstOrDefault(
-                        x => new Rect(new Point(x.X, x.Y), x.GetNodeBounds()).Contains(this._lastMouseState.Position));
 
                 if (!mdown && !IsRunMode)
                 {
@@ -445,7 +444,14 @@ namespace NodeEditor
 
                 if (node != null && !mdown && dragSocket == null)
                 {
-                    node.IsSelected = true;
+                    if (keyModifiers.HasFlag(KeyModifiers.Control) && node.IsSelected)
+                    {
+                        node.IsSelected = false;
+                    }
+                    else
+                    {
+                        node.IsSelected = true;
+                    }
 
                     if (node.CustomEditorAv != null)
                     {

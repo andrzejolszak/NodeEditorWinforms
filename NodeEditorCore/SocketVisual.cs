@@ -60,17 +60,17 @@ namespace NodeEditor
             return new Rect(this.Location.X, this.Location.Y, Width, Height);
         }
 
-        public void DrawAv(DrawingContext g, PointerPoint mouse)
+        public void DrawAv(DrawingContext g, PointerPoint mouse, NodeVisual parent)
         {
             float x = (float)this.Location.X;
             float y = (float)this.Location.Y;
 
             var socketRect = new Rect(x, y, Width, Height).PixelAlign();
-            var hover = socketRect.Contains(mouse.Position);
+            var activeHover = socketRect.Contains(mouse.Position) && !parent.IsSelected;
 
-            if (hover)
+            if (activeHover)
             {
-                socketRect.Inflate(new Thickness(2, 0)).PixelAlign();
+                socketRect = socketRect.Inflate(new Thickness(1, this.Input ? 0 : 3, 1, this.Input ? 3 : 0)).PixelAlign();
                 if (Input)
                 {
                     FormattedText formattedText = new FormattedText(Name + ":" + CurriedValue, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, AvaloniaUtils.FontMonospaceCondensed, 9, Brushes.Blue);

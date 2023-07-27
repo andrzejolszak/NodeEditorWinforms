@@ -316,7 +316,7 @@ namespace NodeEditor
             g.FillRectangle(Brushes.DarkGray, rect.Translate(isHover ? new Vector(6, 6) : new Vector(4, 4)));
             
             var feedrect = rect;
-            feedrect.Inflate(10);
+            feedrect = feedrect.Inflate(10);
             
             if (Feedback == FeedbackType.Warning)
             {
@@ -351,7 +351,7 @@ namespace NodeEditor
             
             foreach (var socet in GetSockets().All)
             {
-                socet.DrawAv(g, mouse);
+                socet.DrawAv(g, mouse, this);
             }
         }
 
