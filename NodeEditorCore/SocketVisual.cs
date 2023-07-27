@@ -17,7 +17,6 @@
 
 using Microsoft.Msagl.Core.Geometry.Curves;
 using Microsoft.Msagl.Core.Layout;
-using System.Drawing.Drawing2D;
 
 namespace NodeEditor
 {
@@ -74,24 +73,24 @@ namespace NodeEditor
                 socketRect.Inflate(new Thickness(2, 0)).PixelAlign();
                 if (Input)
                 {
-                    FormattedText formattedText = new FormattedText(Name + ":" + CurriedValue, CultureInfo.InvariantCulture, Avalonia.Media.FlowDirection.LeftToRight, AvaloniaUtils.FontMonospaceCondensed, 9, Avalonia.Media.Brushes.Blue);
-                    g.DrawText(formattedText, new Avalonia.Point(x, y - SocketHeight * 2));
+                    FormattedText formattedText = new FormattedText(Name + ":" + CurriedValue, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, AvaloniaUtils.FontMonospaceCondensed, 9, Brushes.Blue);
+                    g.DrawText(formattedText, new Point(x, y - SocketHeight * 2));
                 }
                 else
                 {
-                    FormattedText formattedText = new FormattedText(Name + ":" + CurriedValue, CultureInfo.InvariantCulture, Avalonia.Media.FlowDirection.LeftToRight, AvaloniaUtils.FontMonospaceCondensed, 9, Avalonia.Media.Brushes.Blue);
-                    g.DrawText(formattedText, new Avalonia.Point(x, y + SocketHeight));
+                    FormattedText formattedText = new FormattedText(Name + ":" + CurriedValue, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, AvaloniaUtils.FontMonospaceCondensed, 9, Brushes.Blue);
+                    g.DrawText(formattedText, new Point(x, y + SocketHeight));
                 }
             }
 
-            g.FillRectangle(this.CurriedValue == null ? Avalonia.Media.Brushes.DarkGray : Avalonia.Media.Brushes.Black, socketRect);
+            g.FillRectangle(this.CurriedValue == null ? Brushes.DarkGray : Brushes.Black, socketRect);
             if (CurryDefault != null && Value == null)
             {
-                g.FillRectangle(Avalonia.Media.Brushes.PaleGoldenrod, socketRect);
+                g.FillRectangle(Brushes.PaleGoldenrod, socketRect);
             }
 
-            FormattedText ft = new FormattedText(Type.Name.Substring(0, 1).ToLowerInvariant(), CultureInfo.InvariantCulture, Avalonia.Media.FlowDirection.LeftToRight, AvaloniaUtils.FontMonospaceCondensed, 9, Avalonia.Media.Brushes.White);
-            g.DrawText(ft, new Avalonia.Point(x + Width/2 - ft.Width/2, y));
+            FormattedText ft = new FormattedText(Type.Name.Substring(0, 1).ToLowerInvariant(), CultureInfo.InvariantCulture, FlowDirection.LeftToRight, AvaloniaUtils.FontMonospaceCondensed, 9, Brushes.White);
+            g.DrawText(ft, new Point(x + Width/2 - ft.Width/2, y));
         }
     }
 }

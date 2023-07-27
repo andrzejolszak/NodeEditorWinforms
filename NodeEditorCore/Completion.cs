@@ -102,7 +102,7 @@ public class Completion
 
         public object Description => new ScrollViewer()
         {
-            Content = new TextBlock() { Text = this._description, TextWrapping = TextWrapping.Wrap, MaxWidth = 200, Background = Avalonia.Media.Brushes.White },
+            Content = new TextBlock() { Text = this._description, TextWrapping = TextWrapping.Wrap, MaxWidth = 200, Background = Brushes.White },
             MaxHeight = 100,
             VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto
         };

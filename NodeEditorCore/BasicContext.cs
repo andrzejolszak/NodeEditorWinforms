@@ -19,11 +19,11 @@ namespace NodeEditor
             outValue = DateTime.UtcNow.ToLongTimeString();
         }
 
-        [Node(customEditor: typeof(Avalonia.Controls.Label))]
+        [Node(customEditor: typeof(Label))]
         public void ShowMessageBox(object bang, object x)
         {
             if (this.CurrentProcessingNode.CustomEditorAv is not null)
-                (this.CurrentProcessingNode.CustomEditorAv as Avalonia.Controls.Label).Content = x?.ToString() ?? "NULL";
+                (this.CurrentProcessingNode.CustomEditorAv as Label).Content = x?.ToString() ?? "NULL";
         }
 
         [Node(true)]
@@ -32,7 +32,7 @@ namespace NodeEditor
             bang = NodeEditor.Bang.Instance;
         }
 
-        [Node(customEditor: typeof(Avalonia.Controls.Label))]
+        [Node(customEditor: typeof(Label))]
         public void Flipper(Bang bangIn, out Bang bangOut)
         {
             if (this.CurrentProcessingNode.UserData is null)
@@ -45,8 +45,8 @@ namespace NodeEditor
 
             if (this.CurrentProcessingNode.CustomEditorAv is not null)
             {
-                (this.CurrentProcessingNode.CustomEditorAv as Avalonia.Controls.Label).Content = " ";
-                (this.CurrentProcessingNode.CustomEditorAv as Avalonia.Controls.Label).Background = (bool)this.CurrentProcessingNode.UserData ? Avalonia.Media.Brushes.Green: Avalonia.Media.Brushes.Red;
+                (this.CurrentProcessingNode.CustomEditorAv as Label).Content = " ";
+                (this.CurrentProcessingNode.CustomEditorAv as Label).Background = (bool)this.CurrentProcessingNode.UserData ? Brushes.Green : Brushes.Red;
             }
         }
 

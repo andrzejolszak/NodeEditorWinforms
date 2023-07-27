@@ -15,11 +15,9 @@
  * OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-using AnimateForms.Core;
 using Microsoft.Msagl.Core.Layout;
 using Microsoft.Msagl.Routing.Rectilinear;
 using Supercluster.KDTree;
-using System.Drawing.Drawing2D;
 
 namespace NodeEditor
 {
@@ -28,7 +26,7 @@ namespace NodeEditor
         public NodeVisual OwnerNode { get; set; }
         private const int HoverThrottlingMs = 10;
         internal KDTree<float, NodeConnection> KdTree = null;
-        private List<(NodeConnection, Avalonia.Point[])> _pointsAv = new List<(NodeConnection, Avalonia.Point[])>();
+        private List<(NodeConnection, Point[])> _pointsAv = new List<(NodeConnection, Point[])>();
         private float _pointsChecksum = 0;
         private bool _treeRecalc = false;
         private bool _hoverRecalc = false;
@@ -40,9 +38,9 @@ namespace NodeEditor
 
         public string GUID = Guid.NewGuid().ToString();
 
-        public void DrawAv(DrawingContext g, PointerPoint mouse, bool isRunMode, Animate animate, double width, double height)
+        public void DrawAv(DrawingContext g, PointerPoint mouse, bool isRunMode, double width, double height)
         {           
-            g.FillRectangle(new SolidColorBrush(Avalonia.Media.Color.FromArgb(220, 255, 255, 255)), new Rect(0,0, width, height));
+            g.FillRectangle(new SolidColorBrush(Color.FromArgb(220, 255, 255, 255)), new Rect(0,0, width, height));
             
             var orderedNodes = Nodes.OrderBy(x => x.BoundingBox.LeftTop);
             foreach (var node in orderedNodes)
@@ -66,7 +64,7 @@ namespace NodeEditor
             foreach (NodeConnection connection in this.Edges)
             {
                 bool isHover = connection == _hoverConnection;
-                Avalonia.Point[] points = connection.DrawAv(g, isHover, isRunMode, animate);
+                Point[] points = connection.DrawAv(g, isHover, isRunMode);
                 _pointsAv.Add((connection, points));
             }
             
@@ -77,7 +75,7 @@ namespace NodeEditor
                 _pointsChecksum = newChecksum;
                 Task.Run(() =>
                 {
-                    (NodeConnection, Avalonia.Point[])[] pointsCopy = _pointsAv.ToArray();
+                    (NodeConnection, Point[])[] pointsCopy = _pointsAv.ToArray();
                     float[][] points = pointsCopy.SelectMany(x => x.Item2.Select(y => (x.Item1, new float[] { (float)y.X, (float)y.Y }))).Select(x => x.Item2).ToArray();
                     NodeConnection[] conns = pointsCopy.SelectMany(x => x.Item2.Select(y => (x.Item1, new float[] { (float)y.X, (float)y.Y }))).Select(x => x.Item1).ToArray();
                     KdTree = new KDTree<float, NodeConnection>(2, points, conns, (x, y) =>

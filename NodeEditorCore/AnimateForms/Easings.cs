@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace AnimateForms.Core
+﻿namespace AnimateForms.Core
 {
     public static class Easings
     {

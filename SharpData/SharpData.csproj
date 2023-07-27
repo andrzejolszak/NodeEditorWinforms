@@ -16,10 +16,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Update="FormMathSample.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
     <None Update="default.nds">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

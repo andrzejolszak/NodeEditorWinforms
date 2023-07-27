@@ -1,11 +1,10 @@
-using Avalonia.Controls.Shapes;
+using AnimateForms.Core;
 using Avalonia.Headless.NUnit;
 using AvaloniaEdit;
 using FluentAssertions;
 using Moq;
 using NodeEditor;
 using NUnit.Framework;
-using System.Diagnostics.Metrics;
 
 namespace Tests;
 
@@ -19,6 +18,7 @@ public class FormsIntegration
     [SetUp]
     public void Setup()
     {
+        Animate.Instance = null;
         this._context = new BasicContext();
         this._graph = new NodesGraph();
         this._control = new NodesControlAv(null);

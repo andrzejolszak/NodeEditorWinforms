@@ -55,9 +55,9 @@ namespace NodeEditor
         public bool IsSelected { get; set; }
         public bool InvokeOnLoad { get; set; }
         public FeedbackType Feedback { get; set; }
-        public Avalonia.Controls.Control CustomEditorAv { get; set; }
+        public Control CustomEditorAv { get; set; }
         public string GUID = Guid.NewGuid().ToString();
-        public Avalonia.Media.Color NodeColorAv = Avalonia.Media.Color.FromArgb(0xFF, 0xF8, 0xF8, 0xFF);
+        public Color NodeColorAv = Color.FromArgb(0xFF, 0xF8, 0xF8, 0xFF);
 
         private List<SocketVisual> _inputSocketsCache;
         private List<SocketVisual> _outputSocketsCache;
@@ -284,7 +284,7 @@ namespace NodeEditor
 
             if (CustomEditorAv != null && this.Name != NewSpecialNodeName && CustomEditorAv.Width > 0 && CustomEditorAv.Height > 0)
             {
-                csize = new Size((float)CustomEditorAv.Width, (float)(CustomEditorAv.Height + HeaderHeight + 8 + SocketVisual.SocketHeight));
+                csize = new Size((float)CustomEditorAv.Width + 10, (float)(CustomEditorAv.Height + HeaderHeight + 8 + SocketVisual.SocketHeight));
             }
 
             var h = HeaderHeight;
@@ -309,44 +309,44 @@ namespace NodeEditor
 
         public void DrawAv(DrawingContext g, PointerPoint mouse, bool isRunMode)
         {
-            var rect = new Rect(new Avalonia.Point((float)X, (float)Y), GetNodeBounds()).PixelAlign();
+            var rect = new Rect(new Point((float)X, (float)Y), GetNodeBounds()).PixelAlign();
 
             // Draw shadow
             bool isHover = rect.Contains(mouse.Position);
-            g.FillRectangle(Avalonia.Media.Brushes.DarkGray, rect.Translate(isHover ? new Vector(6, 6) : new Vector(4, 4)));
+            g.FillRectangle(Brushes.DarkGray, rect.Translate(isHover ? new Vector(6, 6) : new Vector(4, 4)));
             
             var feedrect = rect;
             feedrect.Inflate(10);
             
             if (Feedback == FeedbackType.Warning)
             {
-                g.DrawRectangle(new Avalonia.Media.Pen(Avalonia.Media.Brushes.Yellow, 3), feedrect);
+                g.DrawRectangle(new Pen(Brushes.Yellow, 3), feedrect);
             }
             else if (Feedback == FeedbackType.Error)
             {
-                g.DrawRectangle(new Avalonia.Media.Pen(Avalonia.Media.Brushes.Red, 3), feedrect);
+                g.DrawRectangle(new Pen(Brushes.Red, 3), feedrect);
             }
-            
-            Avalonia.Media.Color fillColor = NodeColorAv;
+
+            Color fillColor = NodeColorAv;
             
             if (IsSelected && !isRunMode)
             {
-                fillColor = Avalonia.Media.Colors.PaleGoldenrod;
+                fillColor = Colors.PaleGoldenrod;
             }
             
-            g.FillRectangle(new Avalonia.Media.SolidColorBrush(fillColor), rect);
+            g.FillRectangle(new SolidColorBrush(fillColor), rect);
 
             g.DrawRectangle(AvaloniaUtils.BlackPen1, rect);
             
             if (this.IsInteractive)
             {
-                g.DrawLine(AvaloniaUtils.BlackPen1, new Avalonia.Point(rect.X + rect.Width - 5, rect.Y), new Avalonia.Point(rect.X + rect.Width - 5, rect.Y + rect.Height));
+                g.DrawLine(AvaloniaUtils.BlackPen1, new Point(rect.X + rect.Width - 5, rect.Y), new Point(rect.X + rect.Width - 5, rect.Y + rect.Height));
             }
             
             if (this.Name != NewSpecialNodeName)
             {
-                FormattedText formattedText = new FormattedText(Name, CultureInfo.InvariantCulture, Avalonia.Media.FlowDirection.LeftToRight, AvaloniaUtils.FontMonospaceNormal, 11, Avalonia.Media.Brushes.Black);
-                g.DrawText(formattedText, new Avalonia.Point((float)this.X + 3, (float)this.Y + HeaderHeight / 4));
+                FormattedText formattedText = new FormattedText(Name, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, AvaloniaUtils.FontMonospaceNormal, 11, Brushes.Black);
+                g.DrawText(formattedText, new Point((float)this.X + 3, (float)this.Y + HeaderHeight / 4));
             }
             
             foreach (var socet in GetSockets().All)
@@ -355,7 +355,7 @@ namespace NodeEditor
             }
         }
 
-        public void Execute(INodesContext context, Animate animate)
+        public void Execute(INodesContext context)
         {
             context.CurrentProcessingNode = this;
 
@@ -378,7 +378,7 @@ namespace NodeEditor
             }
 
             Color orgColor = this.NodeColorAv;
-            _ = animate.Recolor(
+            _ = Animate.Instance?.Recolor(
                 this.GUID,
                 orgColor,
                 x =>
@@ -388,7 +388,7 @@ namespace NodeEditor
                 Easings.ExpIn,
                 50,
                 Colors.Gold).ContinueWith(
-                    t => animate.Recolor(
+                    t => Animate.Instance?.Recolor(
                         this.GUID,
                         this.NodeColorAv,
                         y =>

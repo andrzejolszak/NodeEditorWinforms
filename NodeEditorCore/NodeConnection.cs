@@ -25,7 +25,6 @@ using LineSegment = Microsoft.Msagl.Core.Geometry.Curves.LineSegment;
 using P2 = Microsoft.Msagl.Core.Geometry.Point;
 using Polyline = Microsoft.Msagl.Core.Geometry.Curves.Polyline;
 using RoundedRect = Microsoft.Msagl.Core.Geometry.Curves.RoundedRect;
-using NXUI.Extensions;
 
 namespace NodeEditor
 {
@@ -39,7 +38,7 @@ namespace NodeEditor
 
         public string GUIDEphemeral = Guid.NewGuid().ToString();
 
-        public Avalonia.Media.Pen PenEmhemeralAv = AvaloniaUtils.BlackPen1;
+        public Avalonia.Media.Color BrushColor = Colors.Black;
 
         public bool IsHover { get; private set; }
 
@@ -54,7 +53,7 @@ namespace NodeEditor
 
         public SocketVisual InputSocket => InputNode.GetSockets().Inputs.FirstOrDefault(x => x.Name == InputSocketName);
 
-        public Avalonia.Point[] DrawAv(DrawingContext g, bool isHover, bool isRunMode, Animate animate)
+        public Avalonia.Point[] DrawAv(DrawingContext g, bool isHover, bool isRunMode)
         {
             if (SourcePort is null)
             {
@@ -65,20 +64,12 @@ namespace NodeEditor
             {
                 this.TargetPort = this.InputSocket;
             }
-            
-            if (!this.IsHover && isHover)
-            {
-                this.PenEmhemeralAv = AvaloniaUtils.BlackPen2;
-            }
-            else if (this.IsHover && !isHover)
-            {
-                this.PenEmhemeralAv = AvaloniaUtils.BlackPen1;
-            }
-            
+
             this.IsHover = isHover;
-            
+            Avalonia.Media.Pen pen = new Avalonia.Media.Pen(new SolidColorBrush(this.BrushColor), this.IsHover ? 2 : 1);
+
             // this.PenEmhemeral.LineCap = Avalonia.Media.PenLineCap.Square;
-            
+
             var beginSocket = this.OutputSocket.GetBounds();
             var endSocket = this.InputSocket.GetBounds();
             var begin = beginSocket.Center.WithY(beginSocket.Y + beginSocket.Height);
@@ -86,14 +77,14 @@ namespace NodeEditor
             
             if (this.Curve is null)
             {
-                Avalonia.Point[] points = DrawDragConnectionAv(g, this.PenEmhemeralAv, begin, end);
+                Avalonia.Point[] points = DrawDragConnectionAv(g, pen, begin, end);
                 return points;
             }
             else
             {
                 GraphicsPath path = CreateGraphicsPath(this.Curve);
                 Avalonia.Point[] avPoints = path.PathPoints.Select(x => new Avalonia.Point(x.X, x.Y)).ToArray();
-                g.DrawGeometry(null, this.PenEmhemeralAv, new PolylineGeometry(avPoints, false));
+                g.DrawGeometry(null, pen, new PolylineGeometry(avPoints, false));
                 return avPoints;
             
                 GraphicsPath CreateGraphicsPath(ICurve iCurve)
@@ -301,7 +292,7 @@ namespace NodeEditor
             }
         }
 
-        public void PropagateValue(INodesContext context, Animate animate)
+        public void PropagateValue(INodesContext context)
         {
             bool isUpdate = this.InputSocket.Value != this.OutputSocket.Value;
             if (!(this.OutputSocket.Value is Bang && this.InputSocket.Type != typeof(Bang) && this.InputSocket.Type != typeof(object)))
@@ -311,21 +302,21 @@ namespace NodeEditor
 
             if (isUpdate)
             {
-                Avalonia.Media.Pen orgPen = this.PenEmhemeralAv;
-                _ = animate.Recolor(
+                Avalonia.Media.Color orgBrush = this.BrushColor;
+                _ = Animate.Instance?.Recolor(
                     this.GUIDEphemeral,
-                    (orgPen.Brush as ISolidColorBrush).Color,
-                    x => this.PenEmhemeralAv = new Avalonia.Media.Pen(new SolidColorBrush(x), this.PenEmhemeralAv.Thickness),
+                    orgBrush,
+                    x => this.BrushColor = x,
                     Easings.CubicIn,
                     200,
                     Colors.DarkGoldenrod).ContinueWith(
-                        t => animate.Recolor(
-                        this.GUIDEphemeral,
-                            (this.PenEmhemeralAv.Brush as ISolidColorBrush).Color,
-                            x => this.PenEmhemeralAv = new Avalonia.Media.Pen(new SolidColorBrush(x), this.PenEmhemeralAv.Thickness),
+                        t => Animate.Instance?.Recolor(
+                            this.GUIDEphemeral,
+                            this.BrushColor,
+                            x => this.BrushColor =x,
                             Easings.CubicOut,
-                            50,
-                            (orgPen.Brush as ISolidColorBrush).Color)
+                            500,
+                            orgBrush)
                     );
             }
         }
