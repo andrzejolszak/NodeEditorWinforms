@@ -60,13 +60,13 @@ namespace NodeEditor
             return new Rect(this.Location.X, this.Location.Y, Width, Height);
         }
 
-        public void DrawAv(DrawingContext g, PointerPoint mouse, NodeVisual parent)
+        public void DrawAv(DrawingContext g, PointerPoint mouse, NodeVisual parent, bool isRunMode)
         {
             float x = (float)this.Location.X;
             float y = (float)this.Location.Y;
 
             var socketRect = new Rect(x, y, Width, Height).PixelAlign();
-            var activeHover = socketRect.Contains(mouse.Position) && !parent.IsSelected;
+            var activeHover = socketRect.Contains(mouse.Position) && !parent.IsSelected && !isRunMode;
 
             if (activeHover)
             {

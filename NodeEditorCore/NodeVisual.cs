@@ -351,7 +351,7 @@ namespace NodeEditor
             
             foreach (var socet in GetSockets().All)
             {
-                socet.DrawAv(g, mouse, this);
+                socet.DrawAv(g, mouse, this, isRunMode);
             }
         }
 

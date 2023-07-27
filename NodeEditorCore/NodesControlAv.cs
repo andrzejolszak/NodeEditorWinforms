@@ -29,7 +29,6 @@ namespace NodeEditor
     {
         public NodesGraph MainGraph { get; private set; }
         private System.Timers.Timer timer = new System.Timers.Timer();
-        private bool mdown;
         private PointerPoint _lastMouseState;
         private SocketVisual dragSocket;
         private NodeVisual dragSocketNode;
@@ -183,7 +182,7 @@ namespace NodeEditor
                 selectionEnd = em;
             }
 
-            if (mdown && !IsRunMode)
+            if (pointerPoint.Properties.IsLeftButtonPressed && !IsRunMode)
             {                                            
                 foreach (var node in MainGraph.NodesTyped.Where(x => x.IsSelected))
                 {
@@ -389,7 +388,7 @@ namespace NodeEditor
                     }
                 }
 
-                if (!mdown && !IsRunMode)
+                if (!IsRunMode)
                 {
                     var nodeWhole =
                     MainGraph.NodesTyped.OrderByDescending(x => x.BoundingBox.LeftTop).FirstOrDefault(
@@ -433,7 +432,6 @@ namespace NodeEditor
                             }
                             dragConnectionBegin = this._lastMouseState.Position;
                             dragConnectionEnd = this._lastMouseState.Position;
-                            mdown = true;
                         }
                     }
                     else
@@ -442,7 +440,7 @@ namespace NodeEditor
                     }
                 }
 
-                if (node != null && !mdown && dragSocket == null)
+                if (node != null && dragSocket == null)
                 {
                     if (keyModifiers.HasFlag(KeyModifiers.Control) && node.IsSelected)
                     {
@@ -457,8 +455,6 @@ namespace NodeEditor
                     {
                         node.CustomEditorAv.BringIntoView();
                     }
-
-                    mdown = true;
 
                     InvalidateVisual();
                 }
@@ -563,7 +559,6 @@ namespace NodeEditor
             }
            
             dragSocket = null;
-            mdown = false;
         }
 
         public void SwapAutocompleteNode(Control tb, string text, NodeVisual newAutocompleteNode)
@@ -885,7 +880,7 @@ namespace NodeEditor
 
         public void OnNodesControl_KeyDown(object sender, KeyEventArgs e)
         {
-            if (e.Key == Key.Delete)
+            if (e.Key == Key.Delete && !IsRunMode)
             {
                 DeleteSelectedNodes(null);
                 DeleteHoveredConns();
