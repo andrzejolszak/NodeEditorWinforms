@@ -294,8 +294,18 @@ namespace NodeEditor
 
         public void PropagateValue(INodesContext context)
         {
+            if (this.OutputSocket.Value is null)
+            {
+                return;
+            }
+
             bool isUpdate = this.InputSocket.Value != this.OutputSocket.Value;
-            if (!(this.OutputSocket.Value is Bang && this.InputSocket.Type != typeof(Bang) && this.InputSocket.Type != typeof(object)))
+
+            if (this.InputSocket.Type == typeof(Bang))
+            {
+                this.InputSocket.Value = Bang.Instance;
+            }
+            else if (this.OutputSocket.Value is not Bang || this.InputSocket.Type == typeof(object))
             {
                 this.InputSocket.Value = this.OutputSocket.Value;
             }

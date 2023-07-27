@@ -28,7 +28,6 @@ namespace NodeEditor
     public class NodesControlAv : UserControl
     {
         public NodesGraph MainGraph { get; private set; }
-        private bool needRepaint = true;
         private System.Timers.Timer timer = new System.Timers.Timer();
         private bool mdown;
         private PointerPoint _lastMouseState;
@@ -154,8 +153,6 @@ namespace NodeEditor
             }
 
             e.DrawEllipse(new SolidColorBrush(this.IsFocused ? Colors.GreenYellow : Colors.Pink, 0.5), null, new Rect(this._lastMouseState.Position.X-5, this._lastMouseState.Position.Y-5, 10, 10));
-
-            needRepaint = false;
         }
 
         private static Rect MakeRect(Point a, Point b, bool round)
@@ -232,8 +229,6 @@ namespace NodeEditor
                 }
 
             }            
-
-            needRepaint = true;
         }
 
         public void OnNodesControl_MousePressed(object sender, PointerPressedEventArgs eventArgs) => this.OnNodesControl_MousePressed(eventArgs.GetCurrentPoint(this).Properties.PointerUpdateKind, eventArgs.ClickCount, eventArgs.KeyModifiers);
@@ -321,7 +316,6 @@ namespace NodeEditor
 
                 MainGraph.Nodes.Add(newAutocompleteNode);
                 InvalidateVisual();
-                needRepaint = true;
 
                 return;
             }
@@ -468,8 +462,6 @@ namespace NodeEditor
                     OnNodeSelected(node);
                 }
             }
-
-            needRepaint = true;
         }
 
         private bool IsConnectable(SocketVisual a, SocketVisual b)
@@ -479,7 +471,11 @@ namespace NodeEditor
             var otype = Type.GetType(output.Type.FullName.Replace("&", ""), AssemblyResolver, TypeResolver);
             var itype = Type.GetType(input.Type.FullName.Replace("&", ""), AssemblyResolver, TypeResolver);
             if (otype == null || itype == null) return false;
-            var allow = otype == typeof(Bang) || itype == typeof(Bang) || otype == itype || otype.IsSubclassOf(itype);
+            var allow = otype == itype
+                || itype == typeof(object)
+                || otype.IsSubclassOf(itype)
+                || itype == typeof(Bang)
+                || otype == typeof(Bang);
             return allow;
         }
 
@@ -562,7 +558,6 @@ namespace NodeEditor
            
             dragSocket = null;
             mdown = false;
-            needRepaint = true;
         }
 
         public void SwapAutocompleteNode(Control tb, string text, NodeVisual newAutocompleteNode)
@@ -660,7 +655,6 @@ namespace NodeEditor
             MainGraph.Nodes.Add(replacementNode);
 
             InvalidateVisual();
-            needRepaint = true;
         }
 
         private void ChangeSelectedNodesColor(NodeVisual node)
@@ -678,7 +672,6 @@ namespace NodeEditor
             // }
 
             InvalidateVisual();
-            needRepaint = true;
         }
 
         private void DuplicateSelectedNodes(NodeVisual node)
@@ -773,16 +766,12 @@ namespace NodeEditor
                     c.Curve = null;
                 }
             }
-
-            this.needRepaint = true;
         }
 
         private void ToggleRunMode()
         {
             this.IsRunMode = !this.IsRunMode;
             this.Cursor = this.IsRunMode ? Cursor.Default : AvaloniaUtils.CursorHand.Value;
-
-            this.needRepaint = true;
 
             if (!this.IsRunMode)
             {
@@ -866,8 +855,6 @@ namespace NodeEditor
                         }
                     }
                 }
-
-                this.needRepaint = true;
             }
         }
 
