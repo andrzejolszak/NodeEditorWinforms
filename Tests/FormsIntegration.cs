@@ -14,6 +14,7 @@ public class FormsIntegration
     private BasicContext _context;
     private NodesGraph _graph;
     private NodesControlAv _control;
+    private int _feedbackErrors = 0;
 
     [SetUp]
     public void Setup()
@@ -26,6 +27,11 @@ public class FormsIntegration
         Repaint();
 
         _graph.Nodes.Should().HaveCount(0);
+
+        _context.FeedbackInfo += (string message, NodeVisual nodeVisual, FeedbackType type, object tag, bool breakExecution) =>
+        {
+            _feedbackErrors += type == FeedbackType.Error ? 1 : 0;
+        };
     }
 
     [AvaloniaTest]
@@ -171,11 +177,40 @@ public class FormsIntegration
 
         compare.Feedback.Should().Be(FeedbackType.None);
 
-        ClickNode(bang);
+        ClickNode(bang, expectedFeedbackErrors: 1);
 
         compare.Feedback.Should().Be(FeedbackType.Error);
         feeback.Should().Be("Unknown operator");
         controlNotified = true;
+    }
+
+    [AvaloniaTest]
+    public void ControlFlowScenario1()
+    {
+        NodeVisual bang = AddNode(nameof(BasicContext.Bang));
+        NodeVisual opPlus = AddNode("+");
+        NodeVisual inNum1 = AddNode(nameof(BasicContext.Number) + " 42");
+        NodeVisual inNum2 = AddNode(nameof(BasicContext.Number) + " 5");
+        NodeVisual outNum = AddNode(nameof(BasicContext.Number));
+
+        AddEdge(bang, 0, opPlus, 0);
+        AddEdge(inNum1, 0, opPlus, 0);
+        AddEdge(inNum2, 0, opPlus, 1);
+        AddEdge(opPlus, 0, outNum, 0);
+
+        ToggleEditMode();
+
+        ClickNode(bang);
+        AssertOutputValue(outNum, 0, null);
+
+        ClickNode(inNum1);
+        AssertOutputValue(outNum, 0, null);
+
+        ClickNode(inNum2);
+        AssertOutputValue(outNum, 0, null);
+
+        ClickNode(bang);
+        AssertOutputValue(outNum, 0, 47);
     }
 
 
@@ -241,24 +276,32 @@ public class FormsIntegration
         AssertOutputValue(subgraphNode, 0, Bang.Instance);
     }
 
-    void ToggleEditMode() => PressKey(Key.E, KeyModifiers.Control);
-
+    void ToggleEditMode()
+    {
+        PressKey(Key.E, KeyModifiers.Control);
+        _feedbackErrors.Should().Be(0);
+    }
     void PressKey(Key key, KeyModifiers modifiers = KeyModifiers.None)
     {
         _control.OnNodesControl_KeyDown(null, new Avalonia.Input.KeyEventArgs() { Key = key, KeyModifiers = modifiers });
         Repaint();
     }
 
-    void ClickNode(NodeVisual node, int clickCount = 1)
+    void ClickNode(NodeVisual node, int clickCount = 1, int expectedFeedbackErrors = 0)
     {
         _control.OnNodesControl_MouseMove(new PointerPoint(null, new Point((int)node.X, (int)(node.Y + SocketVisual.SocketHeight + 5)), new PointerPointProperties()));
         _control.OnNodesControl_MousePressed(PointerUpdateKind.LeftButtonPressed, clickCount);
         _control.OnNodesControl_MouseUp(null, null);
         Repaint();
+
+        _feedbackErrors.Should().Be(expectedFeedbackErrors);
     }
 
-    void AssertOutputValue(NodeVisual node, int outputIndex, object? value) => node.GetSockets().Outputs[outputIndex].Value.Should().Be(value);
-
+    void AssertOutputValue(NodeVisual node, int outputIndex, object? value)
+    {
+        node.GetSockets().Outputs[outputIndex].Value.Should().Be(value);
+        _feedbackErrors.Should().Be(0);
+    }
     NodeVisual AddNode(string nodeName)
     {
         int origControlsCount = (_control.Content as Canvas).Children.Count;

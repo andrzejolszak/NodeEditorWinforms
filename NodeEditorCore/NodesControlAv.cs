@@ -254,9 +254,6 @@ namespace NodeEditor
 
                 var newAutocompleteNode = new NodeVisual(NodeVisual.NewSpecialNodeName, this._lastMouseState.Position.X, this._lastMouseState.Position.Y - NodeVisual.HeaderHeight)
                 {
-                    IsInteractive = false,
-                    CustomWidth = -1,
-                    CustomHeight = -1,
                     OwnerGraph = MainGraph
                 };
 
@@ -476,6 +473,7 @@ namespace NodeEditor
             var allow = otype == itype
                 || itype == typeof(object)
                 || otype.IsSubclassOf(itype)
+                || otype.IsAssignableFrom(itype)
                 || itype == typeof(Bang)
                 || otype == typeof(Bang);
             return allow;
@@ -611,12 +609,25 @@ namespace NodeEditor
                 MethodInfo info = methods.SingleOrDefault(x => x.Name.Equals(name.Split(' ')[0], StringComparison.InvariantCultureIgnoreCase));
                 if (info is null)
                 {
-                    return;
+                    foreach (MethodInfo i in methods)
+                    {
+                        NodeAttribute a = i.GetCustomAttributes(typeof(NodeAttribute), false).Cast<NodeAttribute>().FirstOrDefault();
+
+                        if (a?.Alias is not null && a.Alias.Equals(name.Split(' ')[0], StringComparison.InvariantCultureIgnoreCase))
+                        {
+                            info = i;
+                            break;
+                        }
+                    }
+
+                    if (info is null)
+                    {
+                        return;
+                    }
                 }
 
-                NodeAttribute attrib = info.GetCustomAttributes(typeof(NodeAttribute), false)
-                    .Cast<NodeAttribute>()
-                    .FirstOrDefault();
+                NodeAttribute attrib = info.GetCustomAttributes(typeof(NodeAttribute), false).Cast<NodeAttribute>().FirstOrDefault();
+
                 if (attrib is null)
                 {
                     return;
@@ -625,11 +636,8 @@ namespace NodeEditor
                 replacementNode = new NodeVisual(name, newAutocompleteNode.X, newAutocompleteNode.Y)
                 {
                     MethodInf = info,
-                    IsInteractive = attrib.IsInteractive,
-                    CustomWidth = attrib.Width,
-                    CustomHeight = attrib.Height,
-                    InvokeOnLoad = attrib.InvokeOnLoad,
-                    OwnerGraph = MainGraph
+                    OwnerGraph = MainGraph,
+                    NodeAttribute = attrib,
                 };
 
                 if (attrib.CustomEditor != null)
@@ -779,12 +787,12 @@ namespace NodeEditor
                 return;
             }
 
-            Stack<NodeVisual> nodeQueue = new Stack<NodeVisual>();
+            Stack<(NodeVisual, Bang?)> nodeQueue = new Stack<(NodeVisual, Bang?)>();
             foreach(NodeVisual node in MainGraph.NodesTyped.Reverse<NodeVisual>())
             {
-                if (node.InvokeOnLoad)
+                if (node.NodeAttribute.InvokeOnLoad)
                 {
-                    nodeQueue.Push(node);
+                    nodeQueue.Push((node, null));
                 }
             }
 
@@ -795,7 +803,7 @@ namespace NodeEditor
         /// Executes whole node graph (when called parameterless) or given node when specified.
         /// </summary>
         /// <param name="node"></param>
-        private void Execute(Stack<NodeVisual> queue)
+        private void Execute(Stack<(NodeVisual, Bang?)> queue)
         {
             var nodeQueue = queue;
             while (nodeQueue.Count > 0)
@@ -812,49 +820,58 @@ namespace NodeEditor
                     return;
                 }
 
-                NodeVisual init = nodeQueue.Pop();
-                init.Feedback = FeedbackType.None;
+                (NodeVisual, Bang?) curr = nodeQueue.Pop();
+                curr.Item1.Feedback = FeedbackType.None;
 
                 try
                 {
-                    init.Execute(Context);
+                    curr.Item1.Execute(Context, curr.Item2);
                 }
                 catch(Exception ex)
                 {
-                    init.Feedback = FeedbackType.Error;
+                    curr.Item1.Feedback = FeedbackType.Error;
                 }
 
-                foreach (var connection in init.OwnerGraph.EdgesTyped)
+                List<NodeConnection> propagated = new List<NodeConnection>();
+                foreach (var connection in curr.Item1.OwnerGraph.EdgesTyped)
                 {
-                    if (connection.OutputNode != init)
+                    if (connection.OutputNode != curr.Item1)
                     {
                         continue;
                     }
 
-                    connection.PropagateValue(Context);
+                    bool wasPropagated = connection.PropagateValue(Context);
+                    if (wasPropagated)
+                    {
+                        propagated.Add(connection);
+                    }
                 }
 
-                foreach (var connection in init.OwnerGraph.EdgesTyped.Where(x => x.OutputNode == init && x.OutputSocket.Value != null))
+                foreach (var connection in propagated)
                 {
-                    if (connection.InputSocket.HotInput)
+                    if (!connection.InputSocket.HotInput)
                     {
-                        if (connection.InputNode.Type == NodeVisual.NodeType.Subsystem)
-                        {
-                            NodeVisual inlet = connection.InputNode.SubsystemGraph.NodesTyped.Single(x => x.Name == connection.InputSocketName);
-                            inlet.GetSockets().Outputs.Single().Value = connection.InputSocket.Value;
-                            nodeQueue.Push(inlet);
-                        }
-                        else if (connection.InputNode.Type == NodeVisual.NodeType.SubsystemOutlet)
-                        {
-                            SocketVisual subsystemOutput = connection.InputNode.OwnerGraph.OwnerNode.GetSockets().Outputs.Single(x => x.Name == connection.InputNode.Name);
-                            subsystemOutput.Value = connection.InputSocket.Value;
-                            nodeQueue.Push(connection.InputNode.OwnerGraph.OwnerNode);
-                        }
-                        else
-                        {
-                            nodeQueue.Push(connection.InputNode);
-                        }
+                        continue;
                     }
+
+                    Bang? triggerBang = connection.OutputSocket.Value as Bang;
+                    if (connection.InputNode.Type == NodeVisual.NodeType.Subsystem)
+                    {
+                        NodeVisual inlet = connection.InputNode.SubsystemGraph.NodesTyped.Single(x => x.Name == connection.InputSocketName);
+                        inlet.GetSockets().Outputs.Single().Value = connection.InputSocket.Value;
+                        nodeQueue.Push((inlet, triggerBang));
+                    }
+                    else if (connection.InputNode.Type == NodeVisual.NodeType.SubsystemOutlet)
+                    {
+                        SocketVisual subsystemOutput = connection.InputNode.OwnerGraph.OwnerNode.GetSockets().Outputs.Single(x => x.Name == connection.InputNode.Name);
+                        subsystemOutput.Value = connection.InputSocket.Value;
+                        nodeQueue.Push((connection.InputNode.OwnerGraph.OwnerNode, triggerBang));
+                    }
+                    else
+                    {
+                        nodeQueue.Push((connection.InputNode, triggerBang));
+                    }
+
                 }
             }
         }
@@ -906,9 +923,14 @@ namespace NodeEditor
 
         private void OnNodeContextSelected(NodeVisual o)
         {
-            if (this.IsRunMode && o.IsInteractive)
+            if (this.IsRunMode && o.NodeAttribute.IsInteractive)
             {
-                this.Execute(new Stack<NodeVisual>(new[] { o }));
+                Bang triggerBang = new Bang()
+                {
+                    LeftMouseButtonPressed = this._lastMouseState.Properties.IsLeftButtonPressed,
+                    RightMouseButtonPressed = this._lastMouseState.Properties.IsRightButtonPressed
+                };
+                this.Execute(new Stack<(NodeVisual, Bang?)>(new[] { (o, triggerBang) }));
             }
         }
 

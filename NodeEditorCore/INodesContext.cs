@@ -27,15 +27,26 @@ namespace NodeEditor
         /// </summary>
         NodeVisual CurrentProcessingNode { get; set; }
 
+        Bang? CurrentTriggerBang { get; set; }
+
         /// <summary>
         /// Event that can be raised when your application would to return some feedback information
         /// to the nodes graph. (Message, Related Node, Feedback Type, Tag - Anything, BreakExecution)
         /// </summary>
         event Action<string, NodeVisual, FeedbackType, object, bool> FeedbackInfo;
+
+        void RaiseExecutionError(string message);
     }
 
     public class Bang
     {
         public static Bang Instance = new Bang();
+
+        public bool LeftMouseButtonPressed = false;
+        public bool RightMouseButtonPressed = false;
+        public double MouseDragY = 0;
+        public double MouseDragX = 0;
+        public Key Key = Key.None;
+        public KeyModifiers KeyModifiers = KeyModifiers.None;
     }
 }

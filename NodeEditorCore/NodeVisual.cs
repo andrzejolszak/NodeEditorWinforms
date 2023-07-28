@@ -51,9 +51,7 @@ namespace NodeEditor
         public string Name { get; private set; }
 
         internal MethodInfo MethodInf { get; set; }
-        public bool IsInteractive { get; set; }
         public bool IsSelected { get; set; }
-        public bool InvokeOnLoad { get; set; }
         public FeedbackType Feedback { get; set; }
         public Control CustomEditorAv { get; set; }
         public string GUID = Guid.NewGuid().ToString();
@@ -72,14 +70,12 @@ namespace NodeEditor
         /// </summary>
         public int Int32Tag = 0;
 
-        internal int CustomWidth = -1;
-        internal int CustomHeight = -1;
-
         public float X => (float)this.BoundingBox.Left;
 
         public float Y => (float)this.BoundingBox.Bottom;
 
         public NodeType Type { get; private set; }
+        public NodeAttribute NodeAttribute { get; internal set; }
 
         internal NodeVisual(string name, double x0, double y0) : base(new RoundedRect(new Microsoft.Msagl.Core.Geometry.Rectangle(x0, y0, x0, y0), 1, 1))
         {
@@ -106,6 +102,8 @@ namespace NodeEditor
             {
                 this.Type = NodeType.Normal;
             }
+
+            this.NodeAttribute = new NodeAttribute();
         }
 
         public void ResetSocketsCache()
@@ -291,14 +289,14 @@ namespace NodeEditor
 
             csize = new Size(Math.Max(csize.Width, NodeWidth), Math.Max(csize.Height, h));
 
-            if (CustomWidth >= 0)
+            if (this.NodeAttribute.Width >= 0)
             {
-                csize = csize.WithWidth(CustomWidth);
+                csize = csize.WithWidth(this.NodeAttribute.Width);
             }
 
-            if(CustomHeight >= 0)
+            if(this.NodeAttribute.Height >= 0)
             {
-                csize = csize.WithHeight(CustomHeight);
+                csize = csize.WithHeight(this.NodeAttribute.Height);
             }
 
             this.BoundaryCurve = CurveFactory.CreateRectangle(new Microsoft.Msagl.Core.Geometry.Rectangle(this.BoundingBox.Left, this.BoundingBox.Bottom, new Microsoft.Msagl.Core.Geometry.Point(csize.Width, csize.Height)));
@@ -338,12 +336,12 @@ namespace NodeEditor
 
             g.DrawRectangle(AvaloniaUtils.BlackPen1, rect);
             
-            if (this.IsInteractive)
+            if (this.NodeAttribute.IsInteractive)
             {
                 g.DrawLine(AvaloniaUtils.BlackPen1, new Point(rect.X + rect.Width - 5, rect.Y), new Point(rect.X + rect.Width - 5, rect.Y + rect.Height));
             }
             
-            if (this.Name != NewSpecialNodeName)
+            if (this.Name != NewSpecialNodeName && !this.NodeAttribute.HideName)
             {
                 FormattedText formattedText = new FormattedText(Name, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, AvaloniaUtils.FontMonospaceNormal, 11, Brushes.Black);
                 g.DrawText(formattedText, new Point((float)this.X + 3, (float)this.Y + HeaderHeight / 4));
@@ -355,27 +353,41 @@ namespace NodeEditor
             }
         }
 
-        public void Execute(INodesContext context)
+        public void Execute(INodesContext context, Bang? triggerBang)
         {
             context.CurrentProcessingNode = this;
+            context.CurrentTriggerBang = triggerBang;
 
-            if (this.MethodInf is null)
+            try
             {
-                return;
-            }
-
-            _ = this.GetSockets();
-            object[] parameters = this._allSocketsOrdered.Select(x => x.Input ? x.CurriedValue : null).ToArray();
-
-            MethodInf.Invoke(context, parameters);
-            for (int i = 0; i < this._allSocketsOrdered.Count; i++)
-            {
-                SocketVisual sock = this._allSocketsOrdered[i];
-                if (!sock.Input)
+                if (this.MethodInf is null)
                 {
-                    sock.Value = parameters[i];
+                    if (this.Type == NodeType.Normal)
+                    {
+                        context.RaiseExecutionError("MethodInf is null");
+                    }
+
+                    return;
+                }
+
+                _ = this.GetSockets();
+                object[] parameters = this._allSocketsOrdered.Select(x => x.Input ? x.CurriedValue : null).ToArray();
+
+                MethodInf.Invoke(context, parameters);
+                for (int i = 0; i < this._allSocketsOrdered.Count; i++)
+                {
+                    SocketVisual sock = this._allSocketsOrdered[i];
+                    if (!sock.Input)
+                    {
+                        sock.Value = parameters[i];
+                    }
                 }
             }
+            catch (Exception ex)
+            {
+                context.RaiseExecutionError("MethodInf exception: " + ex.Message);
+            }
+
 
             Color orgColor = this.NodeColorAv;
             _ = Animate.Instance?.Recolor(

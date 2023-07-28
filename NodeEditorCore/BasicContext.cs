@@ -5,7 +5,14 @@ namespace NodeEditor
     {
         public NodeVisual CurrentProcessingNode { get; set; }
 
+        public Bang? CurrentTriggerBang { get; set; }
+
         public event Action<string, NodeVisual, FeedbackType, object, bool> FeedbackInfo;
+
+        public void RaiseExecutionError(string message)
+        {
+            this.FeedbackInfo?.Invoke(message, this.CurrentProcessingNode, FeedbackType.Error, null, true);
+        }
 
         [Node]
         public void InputValue(float inValue, out float outValue)
@@ -107,6 +114,33 @@ namespace NodeEditor
 
                 default: this.FeedbackInfo?.Invoke("Unknown operator", this.CurrentProcessingNode, FeedbackType.Error, null, false); break;
             };
+        }
+
+        [Node(true, hideName: true)]
+        public void Number(int inValue, out int? outValue)
+        {
+            outValue = inValue;
+        }
+
+        [Node]
+        public void Op(int? a, string @operator, int? b, out int? result)
+        {
+            result = null;
+            switch (@operator)
+            {
+                case "+": result = a + b; break;
+                case "-": result = a - b; break;
+                case "*": result = a * b; break;
+                case "/": result = a / b; break;
+
+                default: this.FeedbackInfo?.Invoke("Unknown operator", this.CurrentProcessingNode, FeedbackType.Error, null, false); break;
+            };
+        }
+
+        [Node(alias: "+")]
+        public void Plus(int? a, int? b, out int? result)
+        {
+            result = a + b;
         }
 
         [Node]

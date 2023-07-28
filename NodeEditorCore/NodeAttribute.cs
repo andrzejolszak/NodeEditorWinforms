@@ -50,6 +50,10 @@ namespace NodeEditor
 
         public bool InvokeOnLoad { get; set; }
 
+        public string Alias { get; set; }
+
+        public bool HideName { get; set; }
+
         /// <summary>
         /// Attribute for exposing method as node.
         /// </summary>
@@ -64,13 +68,15 @@ namespace NodeEditor
         /// <param name="width">Width of single node, or Auto if not determined</param>
         /// <param name="height">Height of single node, or Auto if not determined</param>
         public NodeAttribute(bool isInteractive = false, Type customEditor = null,
-            int width = Auto, int height = Auto, bool invokeOnLoad = false)
+            int width = Auto, int height = Auto, bool invokeOnLoad = false, string alias = null, bool hideName = false)
         {
             IsInteractive = isInteractive;
             CustomEditor = customEditor;
             Width = width;
             Height = height;
             InvokeOnLoad = invokeOnLoad;
+            Alias = alias;
+            HideName = hideName;
         }
     }
 }

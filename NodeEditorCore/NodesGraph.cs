@@ -209,7 +209,7 @@ namespace NodeEditor
             bw.Write(node.GUID);
             bw.Write(node.X);
             bw.Write(node.Y);
-            bw.Write(node.IsInteractive);
+            bw.Write(node.NodeAttribute.IsInteractive);
             bw.Write(node.Name);
             if (node.CustomEditorAv == null)
             {
@@ -237,7 +237,7 @@ namespace NodeEditor
             string name = br.ReadString();
 
             var loadedNode = new NodeVisual(name, x, y);
-            loadedNode.IsInteractive = isInteractive;
+            loadedNode.NodeAttribute.IsInteractive = isInteractive;
             loadedNode.GUID = id;
             var customEditorAssembly = br.ReadString();
             var customEditor = br.ReadString();
@@ -250,9 +250,9 @@ namespace NodeEditor
                                         .FirstOrDefault();
             if (attribute != null)
             {
-                loadedNode.CustomWidth = attribute.Width;
-                loadedNode.CustomHeight = attribute.Height;
-                loadedNode.InvokeOnLoad = attribute.InvokeOnLoad;
+                loadedNode.NodeAttribute.Width = attribute.Width;
+                loadedNode.NodeAttribute.Height = attribute.Height;
+                loadedNode.NodeAttribute.InvokeOnLoad = attribute.InvokeOnLoad;
             }
 
             var additional = br.ReadInt32(); //read additional data

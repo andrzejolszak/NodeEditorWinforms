@@ -292,24 +292,14 @@ namespace NodeEditor
             }
         }
 
-        public void PropagateValue(INodesContext context)
+        public bool PropagateValue(INodesContext context)
         {
             if (this.OutputSocket.Value is null)
             {
-                return;
+                return false;
             }
 
             bool isUpdate = this.InputSocket.Value != this.OutputSocket.Value;
-
-            if (this.InputSocket.Type == typeof(Bang))
-            {
-                this.InputSocket.Value = Bang.Instance;
-            }
-            else if (this.OutputSocket.Value is not Bang || this.InputSocket.Type == typeof(object))
-            {
-                this.InputSocket.Value = this.OutputSocket.Value;
-            }
-
             if (isUpdate)
             {
                 Avalonia.Media.Color orgBrush = this.BrushColor;
@@ -323,12 +313,25 @@ namespace NodeEditor
                         t => Animate.Instance?.Recolor(
                             this.GUIDEphemeral,
                             this.BrushColor,
-                            x => this.BrushColor =x,
+                            x => this.BrushColor = x,
                             Easings.CubicOut,
                             500,
                             orgBrush)
                     );
             }
+
+            if (this.InputSocket.Type == typeof(Bang))
+            {
+                this.InputSocket.Value = Bang.Instance;
+                return true;
+            }
+            else if (this.OutputSocket.Value is not Bang || this.InputSocket.Type == typeof(object))
+            {
+                this.InputSocket.Value = this.OutputSocket.Value;
+                return true;
+            }
+
+            return this.OutputSocket.Value is Bang;
         }
     }
 }
