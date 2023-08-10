@@ -289,7 +289,7 @@ namespace NodeEditor
                 };
 
                 Completion completion = new Completion(textEditor);
-                completion.ExternalCompletions.AddRange(Context.GetType().GetMethods().Where(x => x.GetCustomAttributes(typeof(NodeAttribute), false).Any()).Select(x => x.Name.ToLowerInvariant())
+                completion.ExternalCompletions.AddRange(Context.GetNodeDescriptors().Select(x => x.Name.ToLowerInvariant())
                     .Concat(new[] { NodeVisual.NewSubsystemNodeNamePrefix, NodeVisual.NewSubsystemInletNodeNamePrefix, NodeVisual.NewSubsystemOutletNodeNamePrefix })
                     .Select(x => new Completion.CompletionItem(x, x)));
 
@@ -604,45 +604,22 @@ namespace NodeEditor
             }
             else
             {
+                Dictionary<string, NodeDescriptor> descs = Context.GetNodeDescriptors().ToDictionary(x => x.Name.ToLowerInvariant());
                 string name = text.Trim();
-                var methods = Context.GetType().GetMethods();
-                MethodInfo info = methods.SingleOrDefault(x => x.Name.Equals(name.Split(' ')[0], StringComparison.InvariantCultureIgnoreCase));
-                if (info is null)
-                {
-                    foreach (MethodInfo i in methods)
-                    {
-                        NodeAttribute a = i.GetCustomAttributes(typeof(NodeAttribute), false).Cast<NodeAttribute>().FirstOrDefault();
-
-                        if (a?.Alias is not null && a.Alias.Equals(name.Split(' ')[0], StringComparison.InvariantCultureIgnoreCase))
-                        {
-                            info = i;
-                            break;
-                        }
-                    }
-
-                    if (info is null)
-                    {
-                        return;
-                    }
-                }
-
-                NodeAttribute attrib = info.GetCustomAttributes(typeof(NodeAttribute), false).Cast<NodeAttribute>().FirstOrDefault();
-
-                if (attrib is null)
+                if (!descs.TryGetValue(name.Split(' ')[0].ToLowerInvariant(), out NodeDescriptor desc))
                 {
                     return;
                 }
 
                 replacementNode = new NodeVisual(name, newAutocompleteNode.X, newAutocompleteNode.Y)
                 {
-                    MethodInf = info,
+                    NodeDesc = desc,
                     OwnerGraph = MainGraph,
-                    NodeAttribute = attrib,
                 };
 
-                if (attrib.CustomEditor != null)
+                if (desc.CustomEditor != null)
                 {
-                    object inst = Activator.CreateInstance(attrib.CustomEditor);
+                    object inst = Activator.CreateInstance(desc.CustomEditor);
                     replacementNode.CustomEditorAv = null;
                     if (inst is Control asCtrl)
                     {
@@ -790,7 +767,7 @@ namespace NodeEditor
             Stack<(NodeVisual, Bang?)> nodeQueue = new Stack<(NodeVisual, Bang?)>();
             foreach(NodeVisual node in MainGraph.NodesTyped.Reverse<NodeVisual>())
             {
-                if (node.NodeAttribute.InvokeOnLoad)
+                if (node.NodeDesc.InvokeOnLoad)
                 {
                     nodeQueue.Push((node, null));
                 }
@@ -923,7 +900,7 @@ namespace NodeEditor
 
         private void OnNodeContextSelected(NodeVisual o)
         {
-            if (this.IsRunMode && o.NodeAttribute.IsInteractive)
+            if (this.IsRunMode && o.NodeDesc.IsInteractive)
             {
                 Bang triggerBang = new Bang()
                 {

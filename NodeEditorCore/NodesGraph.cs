@@ -209,7 +209,7 @@ namespace NodeEditor
             bw.Write(node.GUID);
             bw.Write(node.X);
             bw.Write(node.Y);
-            bw.Write(node.NodeAttribute.IsInteractive);
+            bw.Write(node.NodeDesc.Name);
             bw.Write(node.Name);
             if (node.CustomEditorAv == null)
             {
@@ -221,7 +221,6 @@ namespace NodeEditor
                 bw.Write(node.CustomEditorAv.GetType().Assembly.GetName().Name);
                 bw.Write(node.CustomEditorAv.GetType().FullName);
             }
-            bw.Write(node.MethodInf?.Name ?? "");
             bw.Write(node.SubsystemGraph?.GUID ?? "");
             bw.Write(8); //additional data size per node
             bw.Write(node.Int32Tag);
@@ -230,30 +229,24 @@ namespace NodeEditor
 
         public static (NodeVisual, string) DeserializeNode(BinaryReader br, INodesContext context)
         {
+            Dictionary<string, NodeDescriptor> descs = context.GetNodeDescriptors().ToDictionary(x => x.Name);
             string id = br.ReadString();
             float x = br.ReadSingle();
             float y = br.ReadSingle();
-            bool isInteractive = br.ReadBoolean();
+            string nodeDescName = br.ReadString();
             string name = br.ReadString();
 
             var loadedNode = new NodeVisual(name, x, y);
-            loadedNode.NodeAttribute.IsInteractive = isInteractive;
             loadedNode.GUID = id;
             var customEditorAssembly = br.ReadString();
             var customEditor = br.ReadString();
-            string method = br.ReadString();
-            loadedNode.MethodInf = context.GetType().GetMethod(method);
-            string subsystemGuid = br.ReadString();
 
-            var attribute = loadedNode.MethodInf?.GetCustomAttributes(typeof(NodeAttribute), false)
-                                        .Cast<NodeAttribute>()
-                                        .FirstOrDefault();
-            if (attribute != null)
+            if (descs.TryGetValue(nodeDescName, out NodeDescriptor? desc))
             {
-                loadedNode.NodeAttribute.Width = attribute.Width;
-                loadedNode.NodeAttribute.Height = attribute.Height;
-                loadedNode.NodeAttribute.InvokeOnLoad = attribute.InvokeOnLoad;
+                loadedNode.NodeDesc = desc;
             }
+
+            string subsystemGuid = br.ReadString();
 
             var additional = br.ReadInt32(); //read additional data
             if (additional >= 4)

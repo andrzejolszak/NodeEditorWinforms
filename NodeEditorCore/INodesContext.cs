@@ -36,6 +36,8 @@ namespace NodeEditor
         event Action<string, NodeVisual, FeedbackType, object, bool> FeedbackInfo;
 
         void RaiseExecutionError(string message);
+
+        List<NodeDescriptor> GetNodeDescriptors();
     }
 
     public class Bang

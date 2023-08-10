@@ -11,29 +11,61 @@ namespace MathSample
     // method corresponds to a node by attribute decoration
     public class MathContext : BasicContext
     {
-        [Node]
-        public void Add(float a, float b, out float result, out int sign)
+        public override List<NodeDescriptor> GetNodeDescriptors()
         {
-            result = a + b;
-            sign = Math.Sign(result);
-        }
+            List<NodeDescriptor> descriptors = base.GetNodeDescriptors();
 
-        [Node]
-        public void Substract(float a, float b, out float result)
-        {
-            result = a - b;
-        }
+            descriptors.Add(new NodeDescriptor(
+                "Add",
+                (c, i) =>
+                {
+                    object[] res = new object[2];
+                    res[0] = (float)i[0] + (float)i[1];
+                    res[1] = Math.Sign((float)res[0]);
+                    return res;
+                })
+                .WithInput<float>("a")
+                .WithInput<float>("b")
+                .WithOutput<float>("result")
+                .WithOutput<int>("sign"));
 
-        [Node]
-        public void Multiplty(float a, float b, out float result)
-        {
-            result = a * b;
-        }
+            descriptors.Add(new NodeDescriptor(
+                "Substract",
+                (c, i) =>
+                {
+                    object[] res = new object[1];
+                    res[0] = (float)i[0] - (float)i[1];
+                    return res;
+                })
+                .WithInput<float>("a")
+                .WithInput<float>("b")
+                .WithOutput<float>("result"));
 
-        [Node]
-        public void Divid(float a, float b, out float result)
-        {
-            result = a / b;
+            descriptors.Add(new NodeDescriptor(
+                "Multiplty",
+                (c, i) =>
+                {
+                    object[] res = new object[1];
+                    res[0] = (float)i[0] * (float)i[1];
+                    return res;
+                })
+                .WithInput<float>("a")
+                .WithInput<float>("b")
+                .WithOutput<float>("result"));
+
+            descriptors.Add(new NodeDescriptor(
+                "Divid",
+                (c, i) =>
+                {
+                    object[] res = new object[1];
+                    res[0] = (float)i[0] / (float)i[1];
+                    return res;
+                })
+                .WithInput<float>("a")
+                .WithInput<float>("b")
+                .WithOutput<float>("result"));
+
+            return descriptors;
         }
     }
 }

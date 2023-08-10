@@ -50,7 +50,7 @@ namespace NodeEditor
         /// </summary>
         public string Name { get; private set; }
 
-        internal MethodInfo MethodInf { get; set; }
+        internal NodeDescriptor NodeDesc { get; set; }
         public bool IsSelected { get; set; }
         public FeedbackType Feedback { get; set; }
         public Control CustomEditorAv { get; set; }
@@ -75,7 +75,6 @@ namespace NodeEditor
         public float Y => (float)this.BoundingBox.Bottom;
 
         public NodeType Type { get; private set; }
-        public NodeAttribute NodeAttribute { get; internal set; }
 
         internal NodeVisual(string name, double x0, double y0) : base(new RoundedRect(new Microsoft.Msagl.Core.Geometry.Rectangle(x0, y0, x0, y0), 1, 1))
         {
@@ -103,7 +102,7 @@ namespace NodeEditor
                 this.Type = NodeType.Normal;
             }
 
-            this.NodeAttribute = new NodeAttribute();
+            NodeDesc = new NodeDescriptor(name, null);
         }
 
         public void ResetSocketsCache()
@@ -124,7 +123,7 @@ namespace NodeEditor
             var outputSocketList = new List<SocketVisual>();
             var allSocketsList = new List<SocketVisual>();
 
-            if (MethodInf is null)
+            if (NodeDesc.Action is null)
             {
                 if (this.Type == NodeType.SubsystemInlet)
                 {
@@ -193,19 +192,19 @@ namespace NodeEditor
 
             string[] curry = this.Name.Split(' ').Skip(1).ToArray();
 
-            ParameterInfo[] parms = MethodInf.GetParameters().OrderBy(x => x.Position).ToArray();
-            int outParamsCount = parms.Count(x => x.IsOut);
-            int inParamsCount = parms.Count(x => !x.IsOut);
+            PortDescriptor[] parms = this.NodeDesc.Ports.OrderBy(x => x.Index).ToArray();
+            int outParamsCount = parms.Count(x => x.IsOutput);
+            int inParamsCount = parms.Count(x => !x.IsOutput);
 
             for (int i = 0; i < parms.Length; i++)
             {
-                ParameterInfo pp = parms[i];
+                PortDescriptor pp = parms[i];
                 SocketVisual socket = null;
-                if (pp.IsOut)
+                if (pp.IsOutput)
                 {
                     socket = new SocketVisual(this)
                     {
-                        Type = pp.ParameterType,
+                        Type = pp.Type,
                         Name = pp.Name
                     };
 
@@ -225,7 +224,7 @@ namespace NodeEditor
 
                     socket = new SocketVisual(this)
                     {
-                        Type = pp.ParameterType,
+                        Type = pp.Type,
                         Name = pp.Name,
                         Input = true,
                         HotInput = inputSocketList.Count == 0
@@ -233,7 +232,7 @@ namespace NodeEditor
 
                     if (addCurry && curry[inputSocketList.Count] != "*")
                     {
-                        socket.CurryDefault = Convert.ChangeType(curry[inputSocketList.Count], pp.ParameterType);
+                        socket.CurryDefault = Convert.ChangeType(curry[inputSocketList.Count], pp.Type);
                     }
 
                     inputSocketList.Add(socket);
@@ -289,14 +288,14 @@ namespace NodeEditor
 
             csize = new Size(Math.Max(csize.Width, NodeWidth), Math.Max(csize.Height, h));
 
-            if (this.NodeAttribute.Width >= 0)
+            if (this.NodeDesc.Width >= 0)
             {
-                csize = csize.WithWidth(this.NodeAttribute.Width);
+                csize = csize.WithWidth(this.NodeDesc.Width);
             }
 
-            if(this.NodeAttribute.Height >= 0)
+            if(this.NodeDesc.Height >= 0)
             {
-                csize = csize.WithHeight(this.NodeAttribute.Height);
+                csize = csize.WithHeight(this.NodeDesc.Height);
             }
 
             this.BoundaryCurve = CurveFactory.CreateRectangle(new Microsoft.Msagl.Core.Geometry.Rectangle(this.BoundingBox.Left, this.BoundingBox.Bottom, new Microsoft.Msagl.Core.Geometry.Point(csize.Width, csize.Height)));
@@ -336,12 +335,12 @@ namespace NodeEditor
 
             g.DrawRectangle(AvaloniaUtils.BlackPen1, rect);
             
-            if (this.NodeAttribute.IsInteractive)
+            if (this.NodeDesc.IsInteractive)
             {
                 g.DrawLine(AvaloniaUtils.BlackPen1, new Point(rect.X + rect.Width - 5, rect.Y), new Point(rect.X + rect.Width - 5, rect.Y + rect.Height));
             }
             
-            if (this.Name != NewSpecialNodeName && !this.NodeAttribute.HideName)
+            if (this.Name != NewSpecialNodeName && !this.NodeDesc.HideName)
             {
                 FormattedText formattedText = new FormattedText(Name, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, AvaloniaUtils.FontMonospaceNormal, 11, Brushes.Black);
                 g.DrawText(formattedText, new Point((float)this.X + 3, (float)this.Y + HeaderHeight / 4));
@@ -360,7 +359,7 @@ namespace NodeEditor
 
             try
             {
-                if (this.MethodInf is null)
+                if (this.NodeDesc.Action is null)
                 {
                     if (this.Type == NodeType.Normal)
                     {
@@ -371,16 +370,12 @@ namespace NodeEditor
                 }
 
                 _ = this.GetSockets();
-                object[] parameters = this._allSocketsOrdered.Select(x => x.Input ? x.CurriedValue : null).ToArray();
-
-                MethodInf.Invoke(context, parameters);
-                for (int i = 0; i < this._allSocketsOrdered.Count; i++)
+                object[] parameters = this._inputSocketsCache.Select(x => x.Input ? x.CurriedValue : null).ToArray();
+                object[]? res = NodeDesc.Action.Invoke(context, parameters);
+                for (int i = 0; i < this._outputSocketsCache.Count; i++)
                 {
-                    SocketVisual sock = this._allSocketsOrdered[i];
-                    if (!sock.Input)
-                    {
-                        sock.Value = parameters[i];
-                    }
+                    SocketVisual sock = this._outputSocketsCache[i];
+                    sock.Value = res is not null ? res[i] : null;
                 }
             }
             catch (Exception ex)

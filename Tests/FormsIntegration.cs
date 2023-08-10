@@ -56,10 +56,10 @@ public class FormsIntegration
     [AvaloniaTest]
     public void AddAndConnectControls()
     {
-        NodeVisual loadBang = AddNode(nameof(BasicContext.LoadBang));
-        NodeVisual bang = AddNode(nameof(BasicContext.Bang));
+        NodeVisual loadBang = AddNode("LoadBang");
+        NodeVisual bang = AddNode("Bang");
 
-        NodeVisual flipper = AddNode(nameof(BasicContext.Flipper));
+        NodeVisual flipper = AddNode("Flipper");
         this._graph.Nodes.Should().HaveCount(3);
 
         ClickNode(flipper);
@@ -67,7 +67,7 @@ public class FormsIntegration
         this._graph.Nodes.Should().HaveCount(2);
 
         // Curried node
-        NodeVisual counterC = AddNode(nameof(BasicContext.CounterC) + " * 3");
+        NodeVisual counterC = AddNode("CounterC" + " * 3");
 
         AddEdge(loadBang, 0, counterC, 0);
         AddEdge(bang, 0, counterC, 0);
@@ -101,11 +101,11 @@ public class FormsIntegration
     [AvaloniaTest]
     public void CustomEditor()
     {
-        NodeVisual bangInput = AddNode(nameof(BasicContext.Bang));
-        NodeVisual input = AddNode(nameof(BasicContext.InputValue) + " 42.0");
+        NodeVisual bangInput = AddNode("Bang");
+        NodeVisual input = AddNode("InputValue" + " 42.0");
 
-        NodeVisual bang = AddNode(nameof(BasicContext.Bang));
-        NodeVisual messageBox = AddNode(nameof(BasicContext.ShowMessageBox));
+        NodeVisual bang = AddNode("Bang");
+        NodeVisual messageBox = AddNode("ShowMessageBox");
 
         messageBox.CustomEditorAv.Should().NotBeNull();
         messageBox.CustomEditorAv.Should().BeOfType<Label>();
@@ -136,9 +136,9 @@ public class FormsIntegration
     [AvaloniaTest]
     public void ValueAsBang()
     {
-        NodeVisual bangInput = AddNode(nameof(BasicContext.Bang));
-        NodeVisual input = AddNode(nameof(BasicContext.InputValue) + " 42.0");
-        NodeVisual messageBox = AddNode(nameof(BasicContext.ShowMessageBox));
+        NodeVisual bangInput = AddNode("Bang");
+        NodeVisual input = AddNode("InputValue" + " 42.0");
+        NodeVisual messageBox = AddNode("ShowMessageBox");
 
         AddEdge(bangInput, 0, input, 0);
         AddEdge(input, 0, messageBox, 0);
@@ -158,8 +158,8 @@ public class FormsIntegration
     [AvaloniaTest]
     public void Feedback()
     {
-        NodeVisual bang = AddNode(nameof(BasicContext.Bang));
-        NodeVisual compare = AddNode(nameof(BasicContext.Compare) + " * >> *");
+        NodeVisual bang = AddNode("Bang");
+        NodeVisual compare = AddNode("Compare" + " * >> *");
 
         AddEdge(bang, 0, compare, 0);
 
@@ -187,11 +187,11 @@ public class FormsIntegration
     [AvaloniaTest]
     public void ControlFlowScenario1()
     {
-        NodeVisual bang = AddNode(nameof(BasicContext.Bang));
+        NodeVisual bang = AddNode("Bang");
         NodeVisual opPlus = AddNode("+");
-        NodeVisual inNum1 = AddNode(nameof(BasicContext.Number) + " 42");
-        NodeVisual inNum2 = AddNode(nameof(BasicContext.Number) + " 5");
-        NodeVisual outNum = AddNode(nameof(BasicContext.Number));
+        NodeVisual inNum1 = AddNode("Number" + " 42");
+        NodeVisual inNum2 = AddNode("Number" + " 5");
+        NodeVisual outNum = AddNode("Number");
 
         AddEdge(bang, 0, opPlus, 0);
         AddEdge(inNum1, 0, opPlus, 0);

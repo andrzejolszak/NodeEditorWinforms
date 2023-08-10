@@ -1,4 +1,6 @@
 ﻿
+using static SkiaSharp.SKPath;
+
 namespace NodeEditor
 {
     public class BasicContext : INodesContext
@@ -14,151 +16,226 @@ namespace NodeEditor
             this.FeedbackInfo?.Invoke(message, this.CurrentProcessingNode, FeedbackType.Error, null, true);
         }
 
-        [Node]
-        public void InputValue(float inValue, out float outValue)
+        public virtual List<NodeDescriptor> GetNodeDescriptors()
         {
-            outValue = inValue == 0 ? 32 : inValue;
-        }
+            List<NodeDescriptor> descriptors = new List<NodeDescriptor>();
 
-        [Node]
-        public void Time(bool bang, out string outValue)
-        {
-            outValue = DateTime.UtcNow.ToLongTimeString();
-        }
+            descriptors.Add(new NodeDescriptor(
+                "InputValue",
+                (c, i) =>
+                {
+                    float i0 = (float)i[0];
+                    return new object[] { i0 == 0 ? 32 : i0 };
+                })
+                .WithInput<float>("inValue")
+                .WithOutput<float>("outValue"));
 
-        [Node(customEditor: typeof(Label))]
-        public void ShowMessageBox(object bang, object x)
-        {
-            if (this.CurrentProcessingNode.CustomEditorAv is not null)
-                (this.CurrentProcessingNode.CustomEditorAv as Label).Content = x?.ToString() ?? "NULL";
-        }
+            descriptors.Add(new NodeDescriptor(
+                "Time",
+                (c, i) =>
+                {
+                    object[] res = new object[1];
+                    res[0] = DateTime.UtcNow.ToLongTimeString();
+                    return res;
+                })
+                .WithInput<bool>("bang")
+                .WithOutput<string>("outValue"));
 
-        [Node(true)]
-        public void Bang(out Bang bang)
-        {
-            bang = NodeEditor.Bang.Instance;
-        }
+            descriptors.Add(new NodeDescriptor(
+                "ShowMessageBox",
+                (c, i) =>
+                {
+                    if (this.CurrentProcessingNode.CustomEditorAv is not null)
+                        (this.CurrentProcessingNode.CustomEditorAv as Label).Content = i[1]?.ToString() ?? "NULL";
 
-        [Node(customEditor: typeof(Label))]
-        public void Flipper(Bang bangIn, out Bang bangOut)
-        {
-            if (this.CurrentProcessingNode.UserData is null)
-            {
-                this.CurrentProcessingNode.UserData = false;
-            }
+                    return null;
+                },
+                customEditor: typeof(Label))
+                .WithInput<object>("bang")
+                .WithInput<object>("x"));
 
-            bangOut = bangIn;
-            this.CurrentProcessingNode.UserData = (bool)this.CurrentProcessingNode.UserData ? false : true;
+            descriptors.Add(new NodeDescriptor(
+                "Bang",
+                (c, i) =>
+                {
+                    return new object[1] { NodeEditor.Bang.Instance };
+                },
+                isInteractive: true)
+                .WithOutput<Bang>("bang"));
 
-            if (this.CurrentProcessingNode.CustomEditorAv is not null)
-            {
-                (this.CurrentProcessingNode.CustomEditorAv as Label).Content = " ";
-                (this.CurrentProcessingNode.CustomEditorAv as Label).Background = (bool)this.CurrentProcessingNode.UserData ? Brushes.Green : Brushes.Red;
-            }
-        }
+            descriptors.Add(new NodeDescriptor(
+                "LoadBang",
+                (c, i) =>
+                {
+                    return new object[1] { Bang.Instance };
+                },
+                invokeOnLoad: true)
+                .WithOutput<Bang>("bang"));
 
-        [Node(true)]
-        public void Counter(Bang bangIn, out Bang bangOut)
-        {
-            if (this.CurrentProcessingNode.UserData is null)
-            {
-                this.CurrentProcessingNode.UserData = 0;
-            }
+            descriptors.Add(new NodeDescriptor(
+                "Flipper",
+                (c, i) =>
+                {
+                    if (this.CurrentProcessingNode.UserData is null)
+                    {
+                        this.CurrentProcessingNode.UserData = false;
+                    }
 
-            this.CurrentProcessingNode.UserData = (int)this.CurrentProcessingNode.UserData + 1;
+                    this.CurrentProcessingNode.UserData = (bool)this.CurrentProcessingNode.UserData ? false : true;
 
-            if ((int)this.CurrentProcessingNode.UserData == 2)
-            {
-                this.CurrentProcessingNode.UserData = 0;
-                bangOut = bangIn;
-            }
-            else
-            {
-                bangOut = null;
-            }
-        }
+                    if (this.CurrentProcessingNode.CustomEditorAv is not null)
+                    {
+                        (this.CurrentProcessingNode.CustomEditorAv as Label).Content = " ";
+                        (this.CurrentProcessingNode.CustomEditorAv as Label).Background = (bool)this.CurrentProcessingNode.UserData ? Brushes.Green : Brushes.Red;
+                    }
 
-        [Node(true)]
-        public void CounterC(Bang bangIn, int count, out Bang bangOut)
-        {
-            if (this.CurrentProcessingNode.UserData is null)
-            {
-                this.CurrentProcessingNode.UserData = 0;
-            }
+                    return i;
+                },
+                customEditor: typeof(Label))
+                .WithInput<Bang>("bangIn")
+                .WithOutput<Bang>("bangOut"));
 
-            this.CurrentProcessingNode.UserData = (int)this.CurrentProcessingNode.UserData + 1;
+            descriptors.Add(new NodeDescriptor(
+                "Counter",
+                (c, i) =>
+                {
+                    if (this.CurrentProcessingNode.UserData is null)
+                    {
+                        this.CurrentProcessingNode.UserData = 0;
+                    }
 
-            if ((int)this.CurrentProcessingNode.UserData == count)
-            {
-                this.CurrentProcessingNode.UserData = 0;
-                bangOut = bangIn;
-            }
-            else
-            {
-                bangOut = null;
-            }
-        }
+                    this.CurrentProcessingNode.UserData = (int)this.CurrentProcessingNode.UserData + 1;
 
-        [Node]
-        public void Compare(int a, string @operator, int b, out bool result)
-        {
-            result = false;
-            switch (@operator)
-            {
-                case "<": result = a < b; break;
-                case "<=": result = a <= b; break;
-                case ">": result = a > b; break;
-                case ">=": result = a >= b; break;
-                case "==": result = a == b; break;
-                case "!=": result = a != b; break;
+                    if ((int)this.CurrentProcessingNode.UserData == 2)
+                    {
+                        this.CurrentProcessingNode.UserData = 0;
+                        return i;
+                    }
+                    else
+                    {
+                        return null;
+                    }
+                },
+                isInteractive: true)
+                .WithInput<Bang>("bangIn")
+                .WithOutput<Bang>("bangOut"));
 
-                default: this.FeedbackInfo?.Invoke("Unknown operator", this.CurrentProcessingNode, FeedbackType.Error, null, false); break;
-            };
-        }
+            descriptors.Add(new NodeDescriptor(
+                "CounterC",
+                (c, i) =>
+                {
+                    if (this.CurrentProcessingNode.UserData is null)
+                    {
+                        this.CurrentProcessingNode.UserData = 0;
+                    }
 
-        [Node(true, hideName: true)]
-        public void Number(int inValue, out int? outValue)
-        {
-            outValue = inValue;
-        }
+                    this.CurrentProcessingNode.UserData = (int)this.CurrentProcessingNode.UserData + 1;
 
-        [Node]
-        public void Op(int? a, string @operator, int? b, out int? result)
-        {
-            result = null;
-            switch (@operator)
-            {
-                case "+": result = a + b; break;
-                case "-": result = a - b; break;
-                case "*": result = a * b; break;
-                case "/": result = a / b; break;
+                    if ((int)this.CurrentProcessingNode.UserData == (int)i[1])
+                    {
+                        this.CurrentProcessingNode.UserData = 0;
+                        return new object[1] { i[0] };
+                    }
+                    else
+                    {
+                        return null;
+                    }
+                },
+                isInteractive: true)
+                .WithInput<Bang>("bangIn")
+                .WithInput<int>("count")
+                .WithOutput<Bang>("bangOut"));
 
-                default: this.FeedbackInfo?.Invoke("Unknown operator", this.CurrentProcessingNode, FeedbackType.Error, null, false); break;
-            };
-        }
+            descriptors.Add(new NodeDescriptor(
+                "Compare",
+                (c, i) =>
+                {
+                    bool result = false;
+                    int? a = (int?)i[0];
+                    int? b = (int?)i[2];
+                    switch ((string)i[1])
+                    {
+                        case "<": result = a < b; break;
+                        case "<=": result = a <= b; break;
+                        case ">": result = a > b; break;
+                        case ">=": result = a >= b; break;
+                        case "==": result = a == b; break;
+                        case "!=": result = a != b; break;
 
-        [Node(alias: "+")]
-        public void Plus(int? a, int? b, out int? result)
-        {
-            result = a + b;
-        }
+                        default: this.FeedbackInfo?.Invoke("Unknown operator", this.CurrentProcessingNode, FeedbackType.Error, null, false); break;
+                    }
 
-        [Node]
-        public void AggrAnd(bool input, Bang resetBang, out bool res)
-        {
-            if (resetBang != null || this.CurrentProcessingNode.UserData is null)
-            {
-                this.CurrentProcessingNode.UserData = true;
-            }
+                    return new object[1] { result };
+                })
+                .WithInput<int?>("a")
+                .WithInput<string>("operator")
+                .WithInput<int?>("b")
+                .WithOutput<bool>("result"));
 
-            this.CurrentProcessingNode.UserData = (bool)this.CurrentProcessingNode.UserData && input;
-            res = (bool)this.CurrentProcessingNode.UserData;
-        }
+            descriptors.Add(new NodeDescriptor(
+                "Number",
+                (c, i) =>
+                {
+                    return i;
+                },
+                isInteractive: true,
+                hideName: true)
+                .WithInput<int>("inValue")
+                .WithOutput<int?>("outValue"));
 
-        [Node(false, invokeOnLoad: true)]
-        public void LoadBang(out Bang bang)
-        {
-            bang = NodeEditor.Bang.Instance;
+            descriptors.Add(new NodeDescriptor(
+                "Op",
+                (c, i) =>
+                {
+                    int? result = null;
+                    int? a = (int?)i[0];
+                    int? b = (int?)i[2];
+                    switch ((string)i[1])
+                    {
+                        case "+": result = a + b; break;
+                        case "-": result = a - b; break;
+                        case "*": result = a * b; break;
+                        case "/": result = a / b; break;
+
+                        default: this.FeedbackInfo?.Invoke("Unknown operator", this.CurrentProcessingNode, FeedbackType.Error, null, false); break;
+                    }
+
+                    return new object[1] { result };
+                })
+                .WithInput<int?>("a")
+                .WithInput<string>("operator")
+                .WithInput<int?>("b")
+                .WithOutput<int?>("result"));
+
+            descriptors.Add(new NodeDescriptor(
+                "+",
+                (c, i) =>
+                {
+                    return new object[1] { (int?)i[0] + (int?)i[1] };
+                })
+                .WithInput<int?>("a")
+                .WithInput<int?>("b")
+                .WithOutput<int?>("result"));
+
+            descriptors.Add(new NodeDescriptor(
+                "AggrAnd",
+                (c, i) =>
+                {
+                    if (i[1] != null || this.CurrentProcessingNode.UserData is null)
+                    {
+                        this.CurrentProcessingNode.UserData = true;
+                    }
+
+                    this.CurrentProcessingNode.UserData = (bool)this.CurrentProcessingNode.UserData && (bool)i[0];
+                    bool res = (bool)this.CurrentProcessingNode.UserData;
+
+                    return new object[1] { res };
+                })
+                .WithInput<bool>("input")
+                .WithInput<Bang>("resetBang")
+                .WithOutput<bool>("res"));
+
+            return descriptors;
         }
     }
 }
