@@ -617,16 +617,11 @@ namespace NodeEditor
                     OwnerGraph = MainGraph,
                 };
 
-                if (desc.CustomEditor != null)
+                if (desc.CustomEditorFactory != null)
                 {
-                    object inst = Activator.CreateInstance(desc.CustomEditor);
-                    replacementNode.CustomEditorAv = null;
-                    if (inst is Control asCtrl)
-                    {
-                        replacementNode.CustomEditorAv = asCtrl;
-                        asCtrl[BackgroundProperty] = new SolidColorBrush(newAutocompleteNode.NodeColorAv);
-                        (this.Content as Canvas).Children.Add(asCtrl);
-                    }
+                   replacementNode.CustomEditorAv = desc.CustomEditorFactory.Invoke(this);
+                   replacementNode.CustomEditorAv[BackgroundProperty] = new SolidColorBrush(newAutocompleteNode.NodeColorAv);
+                   (this.Content as Canvas).Children.Add(replacementNode.CustomEditorAv);
 
                     replacementNode.LayoutEditor();
                 }
@@ -802,7 +797,10 @@ namespace NodeEditor
 
                 try
                 {
-                    curr.Item1.Execute(Context, curr.Item2);
+                    if (curr.Item1.Type == NodeVisual.NodeType.Normal)
+                    {
+                        curr.Item1.Execute(Context, curr.Item2);
+                    }
                 }
                 catch(Exception ex)
                 {

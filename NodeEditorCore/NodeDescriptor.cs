@@ -7,6 +7,8 @@ namespace NodeEditor
 
         public Func<INodesContext, object[], object[]?> Action { get; }
 
+        public Func<Control, Control>? CustomEditorFactory { get; private set; }
+
         public string Name { get; }
 
         /// <summary>
@@ -14,40 +16,20 @@ namespace NodeEditor
         /// </summary>
         public bool IsInteractive { get; internal set; }
 
-        /// <summary>
-        /// Given type should be subclass of System.Windows.Forms.Control, and represents what will be displayed in the middle of the node.
-        /// </summary>
-        public Type CustomEditor { get; }
-
-        /// <summary>
-        /// Width of single node
-        /// </summary>
-        public int Width { get; internal set; }
-
-        /// <summary>
-        /// Height of single node
-        /// </summary>
-        public int Height { get; internal set; }
-
         public bool InvokeOnLoad { get; internal set; }
 
-        public string Alias { get; }
-
-        public bool HideName { get; }
+        public Func<INodesContext?, object[]?, string>? DisplayTextSelector { get; }
 
         public List<PortDescriptor> Ports { get; private set; } = new List<PortDescriptor>();
 
-        public NodeDescriptor(string name, Func<INodesContext, object[], object[]> action, bool isInteractive = false, Type customEditor = null, int width = -1, int height = -1, bool invokeOnLoad = false, string alias = null, bool hideName = false)
+        public NodeDescriptor(string name, Func<INodesContext, object[], object[]> action, bool isInteractive = false, bool invokeOnLoad = false, Func<INodesContext?, object[]?, string>? displayTextSelector = null)
         {
+            // TODO: keep own state on the instance?
             Name = name;
             Action = action;
             IsInteractive = isInteractive;
-            CustomEditor = customEditor;
-            Width = width;
-            Height = height;
             InvokeOnLoad = invokeOnLoad;
-            Alias = alias;
-            HideName = hideName;
+            DisplayTextSelector = displayTextSelector;
         }
 
         public void Freeze()
@@ -76,6 +58,12 @@ namespace NodeEditor
         public NodeDescriptor WithInput<T>(string name, bool isInput = false, bool isOutput = false, int index = -1) => this.WithPort(new PortDescriptor(name, typeof(T), isInput: true, isOutput: false));
 
         public NodeDescriptor WithOutput<T>(string name, bool isInput = false, bool isOutput = false, int index = -1) => this.WithPort(new PortDescriptor(name, typeof(T), isInput: false, isOutput: true));
+
+        public NodeDescriptor WithCustomEditor(Func<Control, Control> factory)
+        {
+            this.CustomEditorFactory = factory;
+            return this;
+        }
     }
 
     public class PortDescriptor

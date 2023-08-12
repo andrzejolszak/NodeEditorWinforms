@@ -50,6 +50,8 @@ namespace NodeEditor
         /// </summary>
         public string Name { get; private set; }
 
+        public string? CustomDisplayText { get; private set; }
+
         internal NodeDescriptor NodeDesc { get; set; }
         public bool IsSelected { get; set; }
         public FeedbackType Feedback { get; set; }
@@ -102,7 +104,8 @@ namespace NodeEditor
                 this.Type = NodeType.Normal;
             }
 
-            NodeDesc = new NodeDescriptor(name, null);
+            NodeDesc = new NodeDescriptor(name, (x, y) => null);
+            NodeDesc.Freeze();
         }
 
         public void ResetSocketsCache()
@@ -114,7 +117,7 @@ namespace NodeEditor
 
         public (List<SocketVisual> Inputs, List<SocketVisual> Outputs, List<SocketVisual> All) GetSockets()
         {
-            if(_allSocketsOrdered != null)
+            if (_allSocketsOrdered != null)
             {
                 return (_inputSocketsCache, _outputSocketsCache, _allSocketsOrdered);
             }
@@ -123,62 +126,67 @@ namespace NodeEditor
             var outputSocketList = new List<SocketVisual>();
             var allSocketsList = new List<SocketVisual>();
 
-            if (NodeDesc.Action is null)
+            bool isNoActionSocket = false;
+            if (this.Type == NodeType.SubsystemInlet)
             {
-                if (this.Type == NodeType.SubsystemInlet)
-                {
-                    SocketVisual outSocket = new SocketVisual(this);
-                    outSocket.Type = typeof(object);
-                    outSocket.Name = "out-passthrough";
-                    outputSocketList.Add(outSocket);
-                    allSocketsList.Add(outSocket);
-                }
-                else if (this.Type == NodeType.SubsystemOutlet)
-                {
-                    SocketVisual inSocket = new SocketVisual(this);
-                    inSocket.Type = typeof(object);
-                    inSocket.Name = "in-passthrough";
-                    inSocket.Input = true;
-                    inSocket.HotInput = true;
-                    inputSocketList.Add(inSocket);
-                    allSocketsList.Add(inSocket);
-                }
-                else if (this.Type == NodeType.Subsystem)
-                {
-                    // TODO will need to invalidate this cache
-                    // TODO: hot sockets
-                    // TODO: probably create new socket objects?
-                    // TOOD: clean connections? or refer only by name?
-                    float inlParamsCount = this.SubsystemGraph.Nodes.Cast<NodeVisual>().Count(x => x.Type == NodeType.SubsystemInlet);
-                    float outlParamsCount = this.SubsystemGraph.Nodes.Cast<NodeVisual>().Count(x => x.Type == NodeType.SubsystemOutlet);
+                SocketVisual outSocket = new SocketVisual(this);
+                outSocket.Type = typeof(object);
+                outSocket.Name = "out-passthrough";
+                outputSocketList.Add(outSocket);
+                allSocketsList.Add(outSocket);
+                isNoActionSocket = true;
+            }
+            else if (this.Type == NodeType.SubsystemOutlet)
+            {
+                SocketVisual inSocket = new SocketVisual(this);
+                inSocket.Type = typeof(object);
+                inSocket.Name = "in-passthrough";
+                inSocket.Input = true;
+                inSocket.HotInput = true;
+                inputSocketList.Add(inSocket);
+                allSocketsList.Add(inSocket);
+                isNoActionSocket = true;
+            }
+            else if (this.Type == NodeType.Subsystem)
+            {
+                // TODO will need to invalidate this cache
+                // TODO: hot sockets
+                // TODO: probably create new socket objects?
+                // TOOD: clean connections? or refer only by name?
+                float inlParamsCount = this.SubsystemGraph.Nodes.Cast<NodeVisual>().Count(x => x.Type == NodeType.SubsystemInlet);
+                float outlParamsCount = this.SubsystemGraph.Nodes.Cast<NodeVisual>().Count(x => x.Type == NodeType.SubsystemOutlet);
 
-                    foreach (NodeVisual sn in this.SubsystemGraph.Nodes)
+                foreach (NodeVisual sn in this.SubsystemGraph.Nodes)
+                {
+                    if (sn.Type == NodeType.SubsystemInlet)
                     {
-                        if (sn.Type == NodeType.SubsystemInlet)
+                        SocketVisual newInPassthrough = new SocketVisual(this)
                         {
-                            SocketVisual newInPassthrough = new SocketVisual(this)
-                            {
-                                Type = typeof(object),
-                                Name = sn.Name,
-                                Input = true,
-                                HotInput = true
-                            };
-                            inputSocketList.Add(newInPassthrough);
-                            allSocketsList.Add(newInPassthrough);
-                        }
-                        else if (sn.Type == NodeType.SubsystemOutlet)
+                            Type = typeof(object),
+                            Name = sn.Name,
+                            Input = true,
+                            HotInput = true
+                        };
+                        inputSocketList.Add(newInPassthrough);
+                        allSocketsList.Add(newInPassthrough);
+                    }
+                    else if (sn.Type == NodeType.SubsystemOutlet)
+                    {
+                        SocketVisual newOutPassthrough = new SocketVisual(this)
                         {
-                            SocketVisual newOutPassthrough = new SocketVisual(this)
-                            {
-                                Type = typeof(object),
-                                Name = sn.Name
-                            };
-                            outputSocketList.Add(newOutPassthrough);
-                            allSocketsList.Add(newOutPassthrough);
-                        }
+                            Type = typeof(object),
+                            Name = sn.Name
+                        };
+                        outputSocketList.Add(newOutPassthrough);
+                        allSocketsList.Add(newOutPassthrough);
                     }
                 }
 
+                isNoActionSocket = true;
+            }
+
+            if (isNoActionSocket)
+            {
                 LayoutSockets();
 
                 _outputSocketsCache = outputSocketList;
@@ -248,7 +256,7 @@ namespace NodeEditor
             _allSocketsOrdered = allSocketsList;
 
             return (_inputSocketsCache, _outputSocketsCache, _allSocketsOrdered);
-        
+
             void LayoutSockets()
             {
                 for (int i = 0; i < inputSocketList.Count; i++)
@@ -288,16 +296,6 @@ namespace NodeEditor
 
             csize = new Size(Math.Max(csize.Width, NodeWidth), Math.Max(csize.Height, h));
 
-            if (this.NodeDesc.Width >= 0)
-            {
-                csize = csize.WithWidth(this.NodeDesc.Width);
-            }
-
-            if(this.NodeDesc.Height >= 0)
-            {
-                csize = csize.WithHeight(this.NodeDesc.Height);
-            }
-
             this.BoundaryCurve = CurveFactory.CreateRectangle(new Microsoft.Msagl.Core.Geometry.Rectangle(this.BoundingBox.Left, this.BoundingBox.Bottom, new Microsoft.Msagl.Core.Geometry.Point(csize.Width, csize.Height)));
 
             return new Size((float)this.BoundingBox.Width, (float)this.BoundingBox.Height);
@@ -309,7 +307,7 @@ namespace NodeEditor
             var rect = new Rect(new Point((float)X, (float)Y), GetNodeBounds()).PixelAlign();
 
             // Draw shadow
-            bool isHover = rect.Contains(mouse.Position);
+            bool isHover = rect.Contains(mouse.Position) && (!isRunMode || this.NodeDesc.IsInteractive);
             g.FillRectangle(Brushes.DarkGray, rect.Translate(isHover ? new Vector(6, 6) : new Vector(4, 4)));
             
             var feedrect = rect;
@@ -340,9 +338,9 @@ namespace NodeEditor
                 g.DrawLine(AvaloniaUtils.BlackPen1, new Point(rect.X + rect.Width - 5, rect.Y), new Point(rect.X + rect.Width - 5, rect.Y + rect.Height));
             }
             
-            if (this.Name != NewSpecialNodeName && !this.NodeDesc.HideName)
+            if (this.Name != NewSpecialNodeName)
             {
-                FormattedText formattedText = new FormattedText(Name, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, AvaloniaUtils.FontMonospaceNormal, 11, Brushes.Black);
+                FormattedText formattedText = new FormattedText(this.CustomDisplayText ?? Name, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, AvaloniaUtils.FontMonospaceNormal, 11, Brushes.Black);
                 g.DrawText(formattedText, new Point((float)this.X + 3, (float)this.Y + HeaderHeight / 4));
             }
             
@@ -359,18 +357,11 @@ namespace NodeEditor
 
             try
             {
-                if (this.NodeDesc.Action is null)
-                {
-                    if (this.Type == NodeType.Normal)
-                    {
-                        context.RaiseExecutionError("MethodInf is null");
-                    }
-
-                    return;
-                }
-
                 _ = this.GetSockets();
                 object[] parameters = this._inputSocketsCache.Select(x => x.Input ? x.CurriedValue : null).ToArray();
+
+                this.CustomDisplayText = this.NodeDesc.DisplayTextSelector?.Invoke(context, parameters);
+
                 object[]? res = NodeDesc.Action.Invoke(context, parameters);
                 for (int i = 0; i < this._outputSocketsCache.Count; i++)
                 {
@@ -423,6 +414,8 @@ namespace NodeEditor
                     CustomEditorAv[Avalonia.Controls.Canvas.TopProperty] = HeaderHeight + 4 + this.Y;
                 }
             }
+
+            this.CustomDisplayText = this.NodeDesc.DisplayTextSelector?.Invoke(null, null);
         }
     }
 }

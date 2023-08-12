@@ -24,8 +24,8 @@ namespace NodeEditor
                 "InputValue",
                 (c, i) =>
                 {
-                    float i0 = (float)i[0];
-                    return new object[] { i0 == 0 ? 32 : i0 };
+                    float? i0 = (float?)i[0];
+                    return new object[] { i0 == null ? -1 : i0 };
                 })
                 .WithInput<float>("inValue")
                 .WithOutput<float>("outValue"));
@@ -45,12 +45,12 @@ namespace NodeEditor
                 "ShowMessageBox",
                 (c, i) =>
                 {
-                    if (this.CurrentProcessingNode.CustomEditorAv is not null)
-                        (this.CurrentProcessingNode.CustomEditorAv as Label).Content = i[1]?.ToString() ?? "NULL";
+                    if (c.CurrentProcessingNode.CustomEditorAv is not null)
+                        (c.CurrentProcessingNode.CustomEditorAv as Label).Content = i[1]?.ToString() ?? "NULL";
 
                     return null;
-                },
-                customEditor: typeof(Label))
+                })
+                .WithCustomEditor(x => new Label())
                 .WithInput<object>("bang")
                 .WithInput<object>("x"));
 
@@ -76,22 +76,22 @@ namespace NodeEditor
                 "Flipper",
                 (c, i) =>
                 {
-                    if (this.CurrentProcessingNode.UserData is null)
+                    if (c.CurrentProcessingNode.UserData is null)
                     {
-                        this.CurrentProcessingNode.UserData = false;
+                        c.CurrentProcessingNode.UserData = false;
                     }
 
-                    this.CurrentProcessingNode.UserData = (bool)this.CurrentProcessingNode.UserData ? false : true;
+                    c.CurrentProcessingNode.UserData = (bool)c.CurrentProcessingNode.UserData ? false : true;
 
-                    if (this.CurrentProcessingNode.CustomEditorAv is not null)
+                    if (c.CurrentProcessingNode.CustomEditorAv is not null)
                     {
-                        (this.CurrentProcessingNode.CustomEditorAv as Label).Content = " ";
-                        (this.CurrentProcessingNode.CustomEditorAv as Label).Background = (bool)this.CurrentProcessingNode.UserData ? Brushes.Green : Brushes.Red;
+                        (c.CurrentProcessingNode.CustomEditorAv as Label).Content = " ";
+                        (c.CurrentProcessingNode.CustomEditorAv as Label).Background = (bool)c.CurrentProcessingNode.UserData ? Brushes.Green : Brushes.Red;
                     }
 
                     return i;
-                },
-                customEditor: typeof(Label))
+                })
+                .WithCustomEditor(x => new Label())
                 .WithInput<Bang>("bangIn")
                 .WithOutput<Bang>("bangOut"));
 
@@ -99,16 +99,16 @@ namespace NodeEditor
                 "Counter",
                 (c, i) =>
                 {
-                    if (this.CurrentProcessingNode.UserData is null)
+                    if (c.CurrentProcessingNode.UserData is null)
                     {
-                        this.CurrentProcessingNode.UserData = 0;
+                        c.CurrentProcessingNode.UserData = 0;
                     }
 
-                    this.CurrentProcessingNode.UserData = (int)this.CurrentProcessingNode.UserData + 1;
+                    c.CurrentProcessingNode.UserData = (int)c.CurrentProcessingNode.UserData + 1;
 
-                    if ((int)this.CurrentProcessingNode.UserData == 2)
+                    if ((int)c.CurrentProcessingNode.UserData == 2)
                     {
-                        this.CurrentProcessingNode.UserData = 0;
+                        c.CurrentProcessingNode.UserData = 0;
                         return i;
                     }
                     else
@@ -124,16 +124,16 @@ namespace NodeEditor
                 "CounterC",
                 (c, i) =>
                 {
-                    if (this.CurrentProcessingNode.UserData is null)
+                    if (c.CurrentProcessingNode.UserData is null)
                     {
-                        this.CurrentProcessingNode.UserData = 0;
+                        c.CurrentProcessingNode.UserData = 0;
                     }
 
-                    this.CurrentProcessingNode.UserData = (int)this.CurrentProcessingNode.UserData + 1;
+                    c.CurrentProcessingNode.UserData = (int)c.CurrentProcessingNode.UserData + 1;
 
-                    if ((int)this.CurrentProcessingNode.UserData == (int)i[1])
+                    if ((int)c.CurrentProcessingNode.UserData == (int)i[1])
                     {
-                        this.CurrentProcessingNode.UserData = 0;
+                        c.CurrentProcessingNode.UserData = 0;
                         return new object[1] { i[0] };
                     }
                     else
@@ -162,7 +162,7 @@ namespace NodeEditor
                         case "==": result = a == b; break;
                         case "!=": result = a != b; break;
 
-                        default: this.FeedbackInfo?.Invoke("Unknown operator", this.CurrentProcessingNode, FeedbackType.Error, null, false); break;
+                        default: this.FeedbackInfo?.Invoke("Unknown operator", c.CurrentProcessingNode, FeedbackType.Error, null, false); break;
                     }
 
                     return new object[1] { result };
@@ -179,7 +179,7 @@ namespace NodeEditor
                     return i;
                 },
                 isInteractive: true,
-                hideName: true)
+                displayTextSelector: (c, i) => (i?[0] ?? "0").ToString())
                 .WithInput<int>("inValue")
                 .WithOutput<int?>("outValue"));
 
@@ -197,7 +197,7 @@ namespace NodeEditor
                         case "*": result = a * b; break;
                         case "/": result = a / b; break;
 
-                        default: this.FeedbackInfo?.Invoke("Unknown operator", this.CurrentProcessingNode, FeedbackType.Error, null, false); break;
+                        default: this.FeedbackInfo?.Invoke("Unknown operator", c.CurrentProcessingNode, FeedbackType.Error, null, false); break;
                     }
 
                     return new object[1] { result };
@@ -221,19 +221,21 @@ namespace NodeEditor
                 "AggrAnd",
                 (c, i) =>
                 {
-                    if (i[1] != null || this.CurrentProcessingNode.UserData is null)
+                    if (i[1] != null || c.CurrentProcessingNode.UserData is null)
                     {
-                        this.CurrentProcessingNode.UserData = true;
+                        c.CurrentProcessingNode.UserData = true;
                     }
 
-                    this.CurrentProcessingNode.UserData = (bool)this.CurrentProcessingNode.UserData && (bool)i[0];
-                    bool res = (bool)this.CurrentProcessingNode.UserData;
+                    c.CurrentProcessingNode.UserData = (bool)c.CurrentProcessingNode.UserData && (bool)i[0];
+                    bool res = (bool)c.CurrentProcessingNode.UserData;
 
                     return new object[1] { res };
                 })
                 .WithInput<bool>("input")
                 .WithInput<Bang>("resetBang")
                 .WithOutput<bool>("res"));
+
+            descriptors.ForEach(x => x.Freeze());
 
             return descriptors;
         }
