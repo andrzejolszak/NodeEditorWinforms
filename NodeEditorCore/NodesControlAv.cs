@@ -887,6 +887,75 @@ namespace NodeEditor
             {
                 this.ToggleEdgeRouting();
             }
+
+            NodeVisual? currentNode = MainGraph.NodesTyped.Where(x => x.IsSelected).OrderByDescending(x => x.BoundingBox.LeftTop).FirstOrDefault();
+            if (currentNode is not null)
+            {
+                if (e.KeyModifiers.HasFlag(KeyModifiers.Control))
+                {
+                    Point translatedPoint = this._lastMouseState.Position;
+                    if (e.Key == Key.Right)
+                    {
+                        translatedPoint = new Point(translatedPoint.X + 10, translatedPoint.Y);
+                    }
+                    else if (e.Key == Key.Left)
+                    {
+                        translatedPoint = new Point(Math.Max(0, translatedPoint.X - 10), translatedPoint.Y);
+                    }
+                    else if (e.Key == Key.Up)
+                    {
+                        translatedPoint = new Point(translatedPoint.X, Math.Max(0, translatedPoint.Y - 10));
+                    }
+                    else if (e.Key == Key.Down)
+                    {
+                        translatedPoint = new Point(translatedPoint.X, translatedPoint.Y + 10);
+                    }
+
+                    PointerPoint p = new PointerPoint(this._lastMouseState.Pointer, translatedPoint, new PointerPointProperties(RawInputModifiers.LeftMouseButton, PointerUpdateKind.LeftButtonPressed));
+                    OnNodesControl_MouseMove(p);
+                }
+                else
+                {
+                    NodeVisual? nextNode = null;
+                    if (e.Key == Key.Right)
+                    {
+                        nextNode = MainGraph.NodesTyped
+                            .Where(x => !x.IsSelected && currentNode.BoundingBox.Left < x.BoundingBox.Left)
+                            .OrderBy(x => Math.Sqrt(Promote(Math.Abs(currentNode.BoundingBox.Right - x.BoundingBox.Left)) + Penalize(Math.Abs(currentNode.BoundingBox.Center.Y - x.BoundingBox.Center.Y))))
+                            .FirstOrDefault();
+                    }
+                    else if (e.Key == Key.Left)
+                    {
+                        nextNode = MainGraph.NodesTyped
+                            .Where(x => !x.IsSelected && currentNode.BoundingBox.Right > x.BoundingBox.Right)
+                            .OrderBy(x => Math.Sqrt(Promote(Math.Abs(currentNode.BoundingBox.Left - x.BoundingBox.Right)) + Penalize(Math.Abs(currentNode.BoundingBox.Center.Y - x.BoundingBox.Center.Y))))
+                            .FirstOrDefault();
+                    }
+                    if (e.Key == Key.Up)
+                    {
+                        nextNode = MainGraph.NodesTyped
+                            .Where(x => !x.IsSelected && currentNode.BoundingBox.Bottom > x.BoundingBox.Bottom)
+                            .OrderBy(x => Math.Sqrt(Penalize(Math.Abs(currentNode.BoundingBox.Center.X - x.BoundingBox.Center.X)) + Promote(Math.Abs(currentNode.BoundingBox.Top - x.BoundingBox.Bottom))))
+                            .FirstOrDefault();
+                    }
+                    if (e.Key == Key.Down)
+                    {
+                        nextNode = MainGraph.NodesTyped
+                            .Where(x => !x.IsSelected && currentNode.BoundingBox.Top < x.BoundingBox.Top)
+                            .OrderBy(x => Math.Sqrt(Penalize(Math.Abs(currentNode.BoundingBox.Center.X - x.BoundingBox.Center.X)) + Promote(Math.Abs(currentNode.BoundingBox.Bottom - x.BoundingBox.Top))))
+                            .FirstOrDefault();
+                    }
+
+                    if (nextNode is not null)
+                    {
+                        this._lastMouseState = new PointerPoint(this._lastMouseState.Pointer, new Point(nextNode.BoundingBox.Left + 1, nextNode.BoundingBox.Top - 1), new PointerPointProperties(RawInputModifiers.LeftMouseButton, PointerUpdateKind.LeftButtonPressed));
+                        this.OnNodesControl_MousePressed(PointerUpdateKind.LeftButtonPressed, 1);
+                    }
+
+                    double Penalize(double y) => 1.5 * y;
+                    double Promote(double y) => y;
+                }
+            }
         }
 
         public void OnNodesControl_VisibleChanged(object sender, EventArgs e)
