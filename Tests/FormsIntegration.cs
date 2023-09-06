@@ -184,6 +184,19 @@ public class FormsIntegration
 
         PressKey(Key.D1);
         this._control.DragStartSocket.Should().Be(compare.GetSockets().Inputs[0]);
+
+        // Deleting nodes, and selection from no selection
+        PressKey(Key.Escape);
+        compare.IsSelected.Should().BeTrue();
+
+        this._graph.Nodes.Count.Should().Be(3);
+
+        PressKey(Key.Delete);
+        this._graph.Nodes.Count.Should().Be(2);
+        bang.IsSelected.Should().BeFalse();
+
+        PressKey(Key.Up);
+        bang.IsSelected.Should().BeTrue();
     }
 
     [AvaloniaTest]
@@ -261,6 +274,30 @@ public class FormsIntegration
         compare.IsSelected.Should().BeTrue();
 
         this._graph.Edges.Count.Should().Be(0);
+    }
+
+
+    [AvaloniaTest]
+    public void KeyboardCreate()
+    {
+        NodeVisual loadBang = AddNode("LoadBang", new Point(200, 200));
+        NodeVisual num = AddNode("NumberAndSign", new Point(400, 200));
+        
+        this._graph.Nodes.Count.Should().Be(2);
+
+        // Socket selection
+        PressKey(Key.Enter, KeyModifiers.Control);
+        this._graph.Nodes.Count.Should().Be(3);
+        (this._graph.Nodes.Last() as NodeVisual).IsSelected.Should().BeFalse();
+        (this._graph.Nodes.Last() as NodeVisual).Name.Should().Be("*new*");
+
+        AddNode("Compare", mouseTriggered: false);
+
+        this._graph.Nodes.Count.Should().Be(3);
+        (this._graph.Nodes.Last() as NodeVisual).IsSelected.Should().BeTrue();
+        (this._graph.Nodes.Last() as NodeVisual).Name.Should().Be("Compare");
+        (this._graph.Nodes.Last() as NodeVisual).BoundingBox.Left.Should().Be(400);
+        (this._graph.Nodes.Last() as NodeVisual).BoundingBox.Top.Should().BeGreaterThan(250);
     }
 
     [AvaloniaTest]
@@ -467,15 +504,18 @@ public class FormsIntegration
         node.GetSockets().Outputs[outputIndex].Value.Should().Be(value);
         _feedbackErrors.Should().Be(0);
     }
-    NodeVisual AddNode(string nodeName, Point? location = null)
+    NodeVisual AddNode(string nodeName, Point? location = null, bool mouseTriggered = true)
     {
-        int origControlsCount = (_control.Content as Canvas).Children.Count;
+        if (mouseTriggered)
+        {
+            int origControlsCount = (_control.Content as Canvas).Children.Count;
 
-        _control.OnNodesControl_MouseMove(new PointerPoint(null, location ?? new Point((_graph.Nodes.Count + 1) * 200, (_graph.Nodes.Count + 1) * 200), new PointerPointProperties()));
-        _control.OnNodesControl_MousePressed(PointerUpdateKind.LeftButtonPressed, 2);
+            _control.OnNodesControl_MouseMove(new PointerPoint(null, location ?? new Point((_graph.Nodes.Count + 1) * 200, (_graph.Nodes.Count + 1) * 200), new PointerPointProperties()));
+            _control.OnNodesControl_MousePressed(PointerUpdateKind.LeftButtonPressed, 2);
 
-        _graph.Nodes.Count(x => (x as NodeVisual)!.Name == NodeVisual.NewSpecialNodeName).Should().Be(1);
-        (_control.Content as Canvas).Children.Count.Should().Be(origControlsCount + 1);
+            _graph.Nodes.Count(x => (x as NodeVisual)!.Name == NodeVisual.NewSpecialNodeName).Should().Be(1);
+            (_control.Content as Canvas).Children.Count.Should().Be(origControlsCount + 1);
+        }
 
         TextEditor textBox = (_control.Content as Canvas).Children.Last() as TextEditor;
         textBox.Should().NotBeNull();

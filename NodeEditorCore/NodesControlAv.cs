@@ -15,11 +15,10 @@
  * OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-using System.Data;
-using System.Reflection;
-using Avalonia.Skia;
 using AvaloniaEdit;
 using Sharplog.KME;
+using System.Data;
+using System.Reflection;
 
 namespace NodeEditor
 {
@@ -85,7 +84,7 @@ namespace NodeEditor
 
         private INodesContext context;
 
-        private bool breakExecution = false;        
+        private bool breakExecution = false;
 
         public NodeVisual? Owner { get; }
 
@@ -96,7 +95,7 @@ namespace NodeEditor
         {
             this.Owner = owner;
             this.Focusable = true;
-            
+
             this.AttachedToVisualTree += this.OnNodesControl_VisibleChanged;
             this.PointerPressed += this.OnNodesControl_MousePressed;
             this.PointerMoved += this.OnNodesControl_MouseMove;
@@ -148,11 +147,11 @@ namespace NodeEditor
             }
 
             if (selectionStart != default)
-            {                
-                e.DrawRectangle(new SolidColorBrush(Colors.CornflowerBlue, 0.2), new Pen(Colors.DodgerBlue.ToUInt32()), MakeRect(selectionStart, selectionEnd ,true));
+            {
+                e.DrawRectangle(new SolidColorBrush(Colors.CornflowerBlue, 0.2), new Pen(Colors.DodgerBlue.ToUInt32()), MakeRect(selectionStart, selectionEnd, true));
             }
 
-            e.DrawEllipse(new SolidColorBrush(this.IsFocused ? Colors.GreenYellow : Colors.Pink, 0.5), null, new Rect(this._lastMouseState.Position.X-5, this._lastMouseState.Position.Y-5, 10, 10));
+            e.DrawEllipse(new SolidColorBrush(this.IsFocused ? Colors.GreenYellow : Colors.Pink, 0.5), null, new Rect(this._lastMouseState.Position.X - 5, this._lastMouseState.Position.Y - 5, 10, 10));
         }
 
         private static Rect MakeRect(Point a, Point b, bool round)
@@ -353,7 +352,7 @@ namespace NodeEditor
             }
             else if (updateKind == PointerUpdateKind.LeftButtonPressed)
             {
-                selectionStart  = default;                
+                selectionStart = default;
 
                 Focus();
 
@@ -362,7 +361,7 @@ namespace NodeEditor
 
                 if (!keyModifiers.HasFlag(KeyModifiers.Control) && node?.IsSelected != true)
                 {
-                    foreach(NodeVisual n in MainGraph.Nodes)
+                    foreach (NodeVisual n in MainGraph.Nodes)
                     {
                         n.IsSelected = false;
                     }
@@ -612,9 +611,9 @@ namespace NodeEditor
 
                 if (desc.CustomEditorFactory != null)
                 {
-                   replacementNode.CustomEditorAv = desc.CustomEditorFactory.Invoke(this);
-                   replacementNode.CustomEditorAv[BackgroundProperty] = new SolidColorBrush(newAutocompleteNode.NodeColorAv);
-                   (this.Content as Canvas).Children.Add(replacementNode.CustomEditorAv);
+                    replacementNode.CustomEditorAv = desc.CustomEditorFactory.Invoke(this);
+                    replacementNode.CustomEditorAv[BackgroundProperty] = new SolidColorBrush(newAutocompleteNode.NodeColorAv);
+                    (this.Content as Canvas).Children.Add(replacementNode.CustomEditorAv);
 
                     replacementNode.LayoutEditor();
                 }
@@ -701,7 +700,7 @@ namespace NodeEditor
                         NodeConnection? outCon = MainGraph.EdgesTyped.FirstOrDefault(x => x.OutputSocket == s.Outputs.First());
 
                         if (inCon is not null
-                            && outCon is not null 
+                            && outCon is not null
                             && IsConnectable(inCon.OutputSocket, outCon.InputSocket))
                         {
                             MainGraph.AddEdge(new NodeConnection(inCon.OutputNode, inCon.OutputSocketName, outCon.InputNode, outCon.InputSocketName));
@@ -712,7 +711,7 @@ namespace NodeEditor
                 foreach (var n in selected)
                 {
                     (this.Content as Canvas).Children.Remove(n.CustomEditorAv);
-                    foreach(NodeConnection e in MainGraph.EdgesTyped.Where(x => x.OutputNode == n || x.InputNode == n).ToArray())
+                    foreach (NodeConnection e in MainGraph.EdgesTyped.Where(x => x.OutputNode == n || x.InputNode == n).ToArray())
                     {
                         MainGraph.RemoveEdge(e);
                     }
@@ -757,7 +756,7 @@ namespace NodeEditor
             }
 
             Stack<(NodeVisual, Bang?)> nodeQueue = new Stack<(NodeVisual, Bang?)>();
-            foreach(NodeVisual node in MainGraph.NodesTyped.Reverse<NodeVisual>())
+            foreach (NodeVisual node in MainGraph.NodesTyped.Reverse<NodeVisual>())
             {
                 if (node.NodeDesc.InvokeOnLoad)
                 {
@@ -799,7 +798,7 @@ namespace NodeEditor
                         curr.Item1.Execute(Context, curr.Item2);
                     }
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     curr.Item1.Feedback = FeedbackType.Error;
                 }
@@ -853,12 +852,12 @@ namespace NodeEditor
             var connections = MainGraph.EdgesTyped.Where(x => x.OutputNode == startNode);
             foreach (var connection in connections)
             {
-                if(connection.InputNode == endNode)
+                if (connection.InputNode == endNode)
                 {
                     return true;
                 }
                 bool nextImpact = HasImpact(connection.InputNode, endNode);
-                if(nextImpact)
+                if (nextImpact)
                 {
                     return true;
                 }
@@ -892,84 +891,106 @@ namespace NodeEditor
                 currentNode = MainGraph.NodesTyped.Where(x => x.BoundingBox.Contains(mousePoint)).OrderByDescending(x => x.BoundingBox.LeftTop).FirstOrDefault();
             }
 
-            if (currentNode is not null)
-            {
-                Point origPoint = this._lastMouseState.Position;
-                if (e.KeyModifiers.HasFlag(KeyModifiers.Control))
-                {
-                    Point translatedPoint = this._lastMouseState.Position;
-                    if (e.Key == Key.Right)
-                    {
-                        translatedPoint = new Point(translatedPoint.X + 10, translatedPoint.Y);
-                    }
-                    else if (e.Key == Key.Left)
-                    {
-                        translatedPoint = new Point(Math.Max(0, translatedPoint.X - 10), translatedPoint.Y);
-                    }
-                    else if (e.Key == Key.Up)
-                    {
-                        translatedPoint = new Point(translatedPoint.X, Math.Max(0, translatedPoint.Y - 10));
-                    }
-                    else if (e.Key == Key.Down)
-                    {
-                        translatedPoint = new Point(translatedPoint.X, translatedPoint.Y + 10);
-                    }
+            Microsoft.Msagl.Core.Geometry.Rectangle rect = currentNode?.BoundingBox ?? new Microsoft.Msagl.Core.Geometry.Rectangle(new Microsoft.Msagl.Core.Geometry.Point(this._lastMouseState.Position.X, this._lastMouseState.Position.Y));
 
+            if (e.KeyModifiers.HasFlag(KeyModifiers.Control) && e.Key == Key.Enter)
+            {
+                Point translated = new Point(this._lastMouseState.Position.X, this._lastMouseState.Position.Y + 100);
+                if (currentNode is not null)
+                {
+                    currentNode.IsSelected = false;
+                    translated = new Point(currentNode.BoundingBox.Left, currentNode.BoundingBox.Top + currentNode.BoundingBox.Height + 50);
+                }
+
+                PointerPoint p = new PointerPoint(this._lastMouseState.Pointer, translated, new PointerPointProperties(RawInputModifiers.LeftMouseButton, PointerUpdateKind.LeftButtonPressed));
+                OnNodesControl_MouseMove(p);
+
+                this.OnNodesControl_MousePressed(PointerUpdateKind.LeftButtonPressed, 2);
+            }
+
+            Point origPoint = this._lastMouseState.Position;
+            if (e.KeyModifiers.HasFlag(KeyModifiers.Control))
+            {
+                Point translatedPoint = this._lastMouseState.Position;
+                bool match = false;
+                if (e.Key == Key.Right)
+                {
+                    translatedPoint = new Point(translatedPoint.X + 10, translatedPoint.Y);
+                    match = true;
+                }
+                else if (e.Key == Key.Left)
+                {
+                    translatedPoint = new Point(Math.Max(0, translatedPoint.X - 10), translatedPoint.Y);
+                    match = true;
+                }
+                else if (e.Key == Key.Up)
+                {
+                    translatedPoint = new Point(translatedPoint.X, Math.Max(0, translatedPoint.Y - 10));
+                    match = true;
+                }
+                else if (e.Key == Key.Down)
+                {
+                    translatedPoint = new Point(translatedPoint.X, translatedPoint.Y + 10);
+                    match = true;
+                }
+
+                if (match)
+                {
                     PointerPoint p = new PointerPoint(this._lastMouseState.Pointer, translatedPoint, new PointerPointProperties(RawInputModifiers.LeftMouseButton, PointerUpdateKind.LeftButtonPressed));
                     OnNodesControl_MouseMove(p);
                 }
-                else
+            }
+            else
+            {
+                NodeVisual? nextNode = null;
+                if (e.Key == Key.Right)
                 {
-                    NodeVisual? nextNode = null;
-                    if (e.Key == Key.Right)
-                    {
-                        nextNode = MainGraph.NodesTyped
-                            .Where(x => !x.IsSelected && currentNode.BoundingBox.Left < x.BoundingBox.Left)
-                            .OrderBy(x => Math.Sqrt(Promote(Math.Abs(currentNode.BoundingBox.Right - x.BoundingBox.Left)) + Penalize(Math.Abs(currentNode.BoundingBox.Center.Y - x.BoundingBox.Center.Y))))
-                            .FirstOrDefault();
-                    }
-                    else if (e.Key == Key.Left)
-                    {
-                        nextNode = MainGraph.NodesTyped
-                            .Where(x => !x.IsSelected && currentNode.BoundingBox.Right > x.BoundingBox.Right)
-                            .OrderBy(x => Math.Sqrt(Promote(Math.Abs(currentNode.BoundingBox.Left - x.BoundingBox.Right)) + Penalize(Math.Abs(currentNode.BoundingBox.Center.Y - x.BoundingBox.Center.Y))))
-                            .FirstOrDefault();
-                    }
-                    else if (e.Key == Key.Up)
-                    {
-                        nextNode = MainGraph.NodesTyped
-                            .Where(x => !x.IsSelected && currentNode.BoundingBox.Top > x.BoundingBox.Top)
-                            .OrderBy(x => Math.Sqrt(Penalize(Math.Abs(currentNode.BoundingBox.Center.X - x.BoundingBox.Center.X)) + Promote(Math.Abs(currentNode.BoundingBox.Top - x.BoundingBox.Center.Y))))
-                            .FirstOrDefault();
-                    }
-                    else if (e.Key == Key.Down)
-                    {
-                        nextNode = MainGraph.NodesTyped
-                            .Where(x => !x.IsSelected && currentNode.BoundingBox.Top < x.BoundingBox.Top)
-                            .OrderBy(x => currentNode.BoundingBox.Top + currentNode.BoundingBox.Height < x.BoundingBox.Top ? 0 : 1)
-                            .ThenBy(x => Math.Sqrt(Penalize(Math.Abs(currentNode.BoundingBox.Center.X - x.BoundingBox.Center.X)) + Promote(Math.Abs(currentNode.BoundingBox.Center.Y - x.BoundingBox.Top))))
-                            .FirstOrDefault();
-                    }
-                    
-                    if (nextNode is not null)
-                    {
-                        Point translatedPoint = new Point(nextNode.BoundingBox.Center.X, nextNode.BoundingBox.Center.Y);
-                        this._lastMouseState = new PointerPoint(this._lastMouseState.Pointer, translatedPoint, new PointerPointProperties(RawInputModifiers.LeftMouseButton, PointerUpdateKind.LeftButtonPressed));
-                        if (this.DragStartSocket is null)
-                        {
-                            this.OnNodesControl_MousePressed(PointerUpdateKind.LeftButtonPressed, 1);
-                        }
-                        else
-                        {
-                            OnNodesControl_MouseMove(this._lastMouseState);
-                        }
-
-                        return;
-                    }
-
-                    double Penalize(double y) => 1.5 * y;
-                    double Promote(double y) => y;
+                    nextNode = MainGraph.NodesTyped
+                        .Where(x => !x.IsSelected && rect.Left < x.BoundingBox.Left)
+                        .OrderBy(x => Math.Sqrt(Promote(Math.Abs(rect.Right - x.BoundingBox.Left)) + Penalize(Math.Abs(rect.Center.Y - x.BoundingBox.Center.Y))))
+                        .FirstOrDefault();
                 }
+                else if (e.Key == Key.Left)
+                {
+                    nextNode = MainGraph.NodesTyped
+                        .Where(x => !x.IsSelected && rect.Right > x.BoundingBox.Right)
+                        .OrderBy(x => Math.Sqrt(Promote(Math.Abs(rect.Left - x.BoundingBox.Right)) + Penalize(Math.Abs(rect.Center.Y - x.BoundingBox.Center.Y))))
+                        .FirstOrDefault();
+                }
+                else if (e.Key == Key.Up)
+                {
+                    nextNode = MainGraph.NodesTyped
+                        .Where(x => !x.IsSelected && rect.Top > x.BoundingBox.Top)
+                        .OrderBy(x => Math.Sqrt(Penalize(Math.Abs(rect.Center.X - x.BoundingBox.Center.X)) + Promote(Math.Abs(rect.Top - x.BoundingBox.Center.Y))))
+                        .FirstOrDefault();
+                }
+                else if (e.Key == Key.Down)
+                {
+                    nextNode = MainGraph.NodesTyped
+                        .Where(x => !x.IsSelected && rect.Top < x.BoundingBox.Top)
+                        .OrderBy(x => rect.Top + rect.Height < x.BoundingBox.Top ? 0 : 1)
+                        .ThenBy(x => Math.Sqrt(Penalize(Math.Abs(rect.Center.X - x.BoundingBox.Center.X)) + Promote(Math.Abs(rect.Center.Y - x.BoundingBox.Top))))
+                        .FirstOrDefault();
+                }
+
+                if (nextNode is not null)
+                {
+                    Point translatedPoint = new Point(nextNode.BoundingBox.Center.X, nextNode.BoundingBox.Center.Y);
+                    this._lastMouseState = new PointerPoint(this._lastMouseState.Pointer, translatedPoint, new PointerPointProperties(RawInputModifiers.LeftMouseButton, PointerUpdateKind.LeftButtonPressed));
+                    if (this.DragStartSocket is null)
+                    {
+                        this.OnNodesControl_MousePressed(PointerUpdateKind.LeftButtonPressed, 1);
+                    }
+                    else
+                    {
+                        OnNodesControl_MouseMove(this._lastMouseState);
+                    }
+
+                    return;
+                }
+
+                double Penalize(double y) => 1.5 * y;
+                double Promote(double y) => y;
             }
 
             int? index = null;
@@ -1087,14 +1108,14 @@ namespace NodeEditor
             this.MainGraph = mainGraph;
 
             (this.Content as Canvas).Children.Clear();
-            foreach(NodeVisual n in mainGraph.NodesTyped.Where(x => x.CustomEditorAv != null))
+            foreach (NodeVisual n in mainGraph.NodesTyped.Where(x => x.CustomEditorAv != null))
             {
                 n.CustomEditorAv.UpdateLayout();
                 (this.Content as Canvas).Children.Add(n.CustomEditorAv);
                 n.LayoutEditor();
             }
 
-            this.MinHeight= 600;
+            this.MinHeight = 600;
             this.Bounds = new Rect(0, 0, 800, 600);
 
             this.InvalidateVisual();
