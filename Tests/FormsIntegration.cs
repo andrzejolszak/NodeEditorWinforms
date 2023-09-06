@@ -11,7 +11,28 @@ namespace Tests;
 [FixtureLifeCycle(LifeCycle.InstancePerTestCase)]
 public class FormsIntegration
 {
-    private BasicContext _context;
+    public class TestContext : BasicContext
+    {
+        public override List<NodeDescriptor> GetNodeDescriptors()
+        {
+            List<NodeDescriptor> nds = base.GetNodeDescriptors();
+            nds.Add(new NodeDescriptor(
+                "NumberAndSign",
+                (c, i) =>
+                {
+                    return new object[2] { i[0], Math.Sign((int?)i[0] ?? 0) };
+                },
+                isInteractive: true,
+                displayTextSelector: (c, i) => (i?[0] ?? "0").ToString())
+                .WithInput<int>("inValue")
+                .WithOutput<int?>("outValue")
+                .WithOutput<int?>("sign"));
+
+            return nds;
+        }
+    }
+
+    private TestContext _context;
     private NodesGraph _graph;
     private NodesControlAv _control;
     private int _feedbackErrors = 0;
@@ -20,7 +41,7 @@ public class FormsIntegration
     public void Setup()
     {
         Animate.Instance = null;
-        this._context = new BasicContext();
+        this._context = new TestContext();
         this._graph = new NodesGraph();
         this._control = new NodesControlAv(null);
         _control.Initialize(_context, _graph);
@@ -40,7 +61,7 @@ public class FormsIntegration
         string filePath = "..\\..\\..\\..\\SharpData\\default.nds";
         byte[] originalFile = File.ReadAllBytes(filePath);
 
-        BasicContext context = new BasicContext();
+        TestContext context = new TestContext();
         NodesGraph[] graphs = NodesGraph.Deserialize(originalFile, context);
         NodesControlAv control = new NodesControlAv(null);
         control.Initialize(context, graphs[0]);
@@ -96,6 +117,150 @@ public class FormsIntegration
         // Retains state from previous run
         ClickNode(bang);
         AssertOutputValue(counterC, 0, Bang.Instance);
+    }
+
+    [AvaloniaTest]
+    public void KeyboardNavigationAndSelection()
+    {
+        NodeVisual loadBang = AddNode("LoadBang", new Point(200, 200));
+        loadBang.IsSelected.Should().BeTrue();
+
+        NodeVisual bang = AddNode("Bang", new Point(400, 200));
+        loadBang.IsSelected.Should().BeFalse();
+        bang.IsSelected.Should().BeTrue();
+
+        NodeVisual compare = AddNode("Compare", new Point(400, 400));
+        compare.IsSelected.Should().BeTrue();
+
+        // Arrows
+        PressKey(Key.Up);
+        compare.IsSelected.Should().BeFalse();
+        bang.IsSelected.Should().BeTrue();
+
+        bang.BoundingBox.Top.Should().Be(200);
+
+        PressKey(Key.Down, KeyModifiers.Control);
+        bang.IsSelected.Should().BeTrue();
+        bang.BoundingBox.Top.Should().Be(210);
+
+        PressKey(Key.Left);
+        bang.IsSelected.Should().BeFalse();
+        loadBang.IsSelected.Should().BeTrue();
+
+        PressKey(Key.Down);
+        loadBang.IsSelected.Should().BeFalse();
+        compare.IsSelected.Should().BeTrue();
+
+        // Socket selection
+        PressKey(Key.D1);
+        compare.IsSelected.Should().BeFalse();
+        compare.GetSockets().Inputs[0].ActiveHover.Should().BeTrue();
+        this._control.DragStartSocket.Should().BeNull();
+
+        PressKey(Key.D2);
+        compare.GetSockets().Inputs[0].ActiveHover.Should().BeFalse();
+        compare.GetSockets().Inputs[1].ActiveHover.Should().BeTrue();
+        this._control.DragStartSocket.Should().BeNull();
+
+        PressKey(Key.D2);
+        this._control.DragStartSocket.Should().Be(compare.GetSockets().Inputs[1]);
+
+        PressKey(Key.Escape);
+        compare.GetSockets().Inputs[0].ActiveHover.Should().BeFalse();
+        compare.GetSockets().Inputs[1].ActiveHover.Should().BeFalse();
+        this._control.DragStartSocket.Should().BeNull();
+        compare.IsSelected.Should().BeTrue();
+
+        PressKey(Key.Left);
+        compare.IsSelected.Should().BeFalse();
+        loadBang.IsSelected.Should().BeTrue();
+
+        PressKey(Key.Down);
+        loadBang.IsSelected.Should().BeFalse();
+        compare.IsSelected.Should().BeTrue();
+
+        PressKey(Key.D1);
+        this._control.DragStartSocket.Should().BeNull();
+
+        PressKey(Key.D1);
+        this._control.DragStartSocket.Should().Be(compare.GetSockets().Inputs[0]);
+    }
+
+    [AvaloniaTest]
+    public void KeyboardEditing()
+    {
+        NodeVisual loadBang = AddNode("LoadBang", new Point(200, 200));
+        NodeVisual num = AddNode("NumberAndSign", new Point(400, 200));
+        NodeVisual compare = AddNode("Compare", new Point(400, 400));
+        compare.IsSelected.Should().BeTrue();
+
+        // Socket selection
+        PressKey(Key.D1);
+        compare.IsSelected.Should().BeFalse();
+        compare.GetSockets().Inputs[0].ActiveHover.Should().BeTrue();
+        this._control.DragStartSocket.Should().BeNull();
+
+        PressKey(Key.D1);
+        this._control.DragStartSocket.Should().Be(compare.GetSockets().Inputs[0]);
+
+        PressKey(Key.Up);
+        compare.IsSelected.Should().BeFalse();
+        num.IsSelected.Should().BeFalse();
+        this._control.DragStartSocket.Should().Be(compare.GetSockets().Inputs[0]);
+
+        this._graph.Edges.Count.Should().Be(0);
+
+        PressKey(Key.Q);
+        num.IsSelected.Should().BeFalse();
+        num.GetSockets().Outputs[0].ActiveHover.Should().BeTrue();
+
+        PressKey(Key.W);
+        num.GetSockets().Outputs[1].ActiveHover.Should().BeTrue();
+        this._control.DragStartSocket.Should().Be(compare.GetSockets().Inputs[0]);
+
+        this._graph.Edges.Count.Should().Be(0);
+
+        PressKey(Key.W);
+        num.IsSelected.Should().BeTrue();
+
+        this._graph.Edges.Count.Should().Be(1);
+    }
+
+    [AvaloniaTest]
+    public void KeyboardEditingCancel()
+    {
+        NodeVisual loadBang = AddNode("LoadBang", new Point(200, 200));
+        NodeVisual num = AddNode("NumberAndSign", new Point(400, 200));
+        NodeVisual compare = AddNode("Compare", new Point(400, 400));
+        compare.IsSelected.Should().BeTrue();
+
+        PressKey(Key.D1);
+        PressKey(Key.D1);
+        this._control.DragStartSocket.Should().Be(compare.GetSockets().Inputs[0]);
+
+        PressKey(Key.Up);
+        this._control.DragStartSocket.Should().Be(compare.GetSockets().Inputs[0]);
+
+        PressKey(Key.Q);
+        num.IsSelected.Should().BeFalse();
+        num.GetSockets().Outputs[0].ActiveHover.Should().BeTrue();
+
+        PressKey(Key.Left);
+        num.IsSelected.Should().BeFalse();
+        num.GetSockets().Outputs[0].ActiveHover.Should().BeFalse();
+        loadBang.GetSockets().Outputs[0].ActiveHover.Should().BeFalse();
+
+        PressKey(Key.Q);
+        loadBang.IsSelected.Should().BeFalse();
+        loadBang.GetSockets().Outputs[0].ActiveHover.Should().BeTrue();
+
+        PressKey(Key.Escape);
+
+        this._control.DragStartSocket.Should().BeNull();
+        loadBang.IsSelected.Should().BeFalse();
+        compare.IsSelected.Should().BeTrue();
+
+        this._graph.Edges.Count.Should().Be(0);
     }
 
     [AvaloniaTest]
@@ -302,11 +467,11 @@ public class FormsIntegration
         node.GetSockets().Outputs[outputIndex].Value.Should().Be(value);
         _feedbackErrors.Should().Be(0);
     }
-    NodeVisual AddNode(string nodeName)
+    NodeVisual AddNode(string nodeName, Point? location = null)
     {
         int origControlsCount = (_control.Content as Canvas).Children.Count;
 
-        _control.OnNodesControl_MouseMove(new PointerPoint(null, new Point((_graph.Nodes.Count + 1) * 200, (_graph.Nodes.Count + 1) * 200), new PointerPointProperties()));
+        _control.OnNodesControl_MouseMove(new PointerPoint(null, location ?? new Point((_graph.Nodes.Count + 1) * 200, (_graph.Nodes.Count + 1) * 200), new PointerPointProperties()));
         _control.OnNodesControl_MousePressed(PointerUpdateKind.LeftButtonPressed, 2);
 
         _graph.Nodes.Count(x => (x as NodeVisual)!.Name == NodeVisual.NewSpecialNodeName).Should().Be(1);
