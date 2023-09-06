@@ -29,6 +29,7 @@ namespace NodeEditor
 
         public SocketVisual(NodeVisual nodeVisual) : base(() => null, () => nodeVisual.Center)
         {
+            this.Parent = nodeVisual;
         }
 
         public float Width { get; set; } = SocketWidth;
@@ -50,6 +51,9 @@ namespace NodeEditor
 
         public override ICurve Curve => CurveFactory.CreateRectangle(this.Width, this.Height, new Microsoft.Msagl.Core.Geometry.Point(this.Location.X + this.Width / 2, this.Location.Y + this.Height / 2));
 
+        public bool ActiveHover { get; private set; }
+        public NodeVisual Parent { get; }
+
         public void SetLocationOffset(double x, double y)
         {
             this._locationOffset = new Microsoft.Msagl.Core.Geometry.Point(x, y);
@@ -66,9 +70,9 @@ namespace NodeEditor
             float y = (float)this.Location.Y;
 
             var socketRect = new Rect(x, y, Width, Height).PixelAlign();
-            var activeHover = socketRect.Contains(mouse.Position) && !parent.IsSelected && !isRunMode;
+            this.ActiveHover = socketRect.Contains(mouse.Position) && !parent.IsSelected && !isRunMode;
 
-            if (activeHover)
+            if (this.ActiveHover)
             {
                 socketRect = socketRect.Inflate(new Thickness(1, this.Input ? 0 : 3, 1, this.Input ? 3 : 0)).PixelAlign();
                 if (Input)

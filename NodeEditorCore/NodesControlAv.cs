@@ -30,8 +30,8 @@ namespace NodeEditor
         public NodesGraph MainGraph { get; private set; }
         private System.Timers.Timer timer = new System.Timers.Timer();
         private PointerPoint _lastMouseState;
-        private SocketVisual dragSocket;
-        private NodeVisual dragSocketNode;
+        private SocketVisual? dragSocket;
+        private NodeVisual? dragSocketNode;
         private Point dragConnectionBegin;
         private Point dragConnectionEnd;
 
@@ -183,7 +183,7 @@ namespace NodeEditor
             }
 
             if (pointerPoint.Properties.IsLeftButtonPressed && !IsRunMode)
-            {                                            
+            {
                 foreach (var node in MainGraph.NodesTyped.Where(x => x.IsSelected))
                 {
                     node.BoundaryCurve.Translate(new Microsoft.Msagl.Core.Geometry.Point(em.X - prevPosition.X, em.Y - prevPosition.Y));
@@ -194,8 +194,8 @@ namespace NodeEditor
                 if (MainGraph.NodesTyped.Any(x => x.IsSelected))
                 {
                     var n = MainGraph.NodesTyped.FirstOrDefault(x => x.IsSelected);
-                    var bound = new Rect(new Point(n.X,n.Y), n.GetNodeBounds());
-                    foreach (var node in MainGraph.NodesTyped.Where(x=>x.IsSelected))
+                    var bound = new Rect(new Point(n.X, n.Y), n.GetNodeBounds());
+                    foreach (var node in MainGraph.NodesTyped.Where(x => x.IsSelected))
                     {
                         bound = bound.Union(new Rect(new Point(node.X, node.Y), node.GetNodeBounds()));
                     }
@@ -204,30 +204,34 @@ namespace NodeEditor
                 }
 
                 InvalidateVisual();
-                
-                if (dragSocket != null)
+
+                UpdateDragConnection(prevPosition, em);
+            }
+        }
+
+        private void UpdateDragConnection(Point prevMousePosition, Point newMousePosition)
+        {
+            if (dragSocket != null)
+            {
+                var center = new Point(dragSocket.Location.X + dragSocket.Width / 2, dragSocket.Location.Y + dragSocket.Height / 2);
+                if (dragSocket.Input)
                 {
-                    var center = new Point(dragSocket.Location.X + dragSocket.Width/2, dragSocket.Location.Y + dragSocket.Height/2);
-                    if (dragSocket.Input)
-                    {
-                        dragConnectionBegin = dragConnectionBegin
-                            .WithX(dragConnectionBegin.X + em.X - prevPosition.X)
-                            .WithY(dragConnectionBegin.Y + em.Y - prevPosition.Y);
-                        dragConnectionEnd = center;
-                        OnShowLocation(new Rect(dragConnectionBegin, new Size(10, 10)));
-                    }
-                    else
-                    {
-                        dragConnectionBegin = center;
-                        dragConnectionEnd = dragConnectionEnd
-                            .WithX(dragConnectionEnd.X + em.X - prevPosition.X)
-                            .WithY(dragConnectionEnd.Y + em.Y - prevPosition.Y);
-                        OnShowLocation(new Rect(dragConnectionEnd, new Size(10, 10)));
-                    }
-                    
+                    dragConnectionBegin = dragConnectionBegin
+                        .WithX(dragConnectionBegin.X + newMousePosition.X - prevMousePosition.X)
+                        .WithY(dragConnectionBegin.Y + newMousePosition.Y - prevMousePosition.Y);
+                    dragConnectionEnd = center;
+                    OnShowLocation(new Rect(dragConnectionBegin, new Size(10, 10)));
+                }
+                else
+                {
+                    dragConnectionBegin = center;
+                    dragConnectionEnd = dragConnectionEnd
+                        .WithX(dragConnectionEnd.X + newMousePosition.X - prevMousePosition.X)
+                        .WithY(dragConnectionEnd.Y + newMousePosition.Y - prevMousePosition.Y);
+                    OnShowLocation(new Rect(dragConnectionEnd, new Size(10, 10)));
                 }
 
-            }            
+            }
         }
 
         public void OnNodesControl_MousePressed(object sender, PointerPressedEventArgs eventArgs) => this.OnNodesControl_MousePressed(eventArgs.GetCurrentPoint(this).Properties.PointerUpdateKind, eventArgs.ClickCount, eventArgs.KeyModifiers);
@@ -250,6 +254,11 @@ namespace NodeEditor
                 if (IsRunMode || selectedNode != null)
                 {
                     return;
+                }
+
+                foreach (NodeVisual n in MainGraph.Nodes)
+                {
+                    n.IsSelected = false;
                 }
 
                 var newAutocompleteNode = new NodeVisual(NodeVisual.NewSpecialNodeName, this._lastMouseState.Position.X, this._lastMouseState.Position.Y - NodeVisual.HeaderHeight)
@@ -393,43 +402,8 @@ namespace NodeEditor
                     if (nodeWhole != null)
                     {
                         node = nodeWhole;
-                        var socket = nodeWhole.GetSockets().All.FirstOrDefault(x => x.GetBounds().Contains(this._lastMouseState.Position));
-                        if (socket != null)
-                        {
-                            if (keyModifiers.HasFlag(KeyModifiers.Control))
-                            {
-                                var connection =
-                                    MainGraph.EdgesTyped.FirstOrDefault(
-                                        x => x.InputNode == nodeWhole && x.InputSocketName == socket.Name);
 
-                                if (connection != null)
-                                {
-                                    dragSocket = connection.OutputSocket;
-                                    dragSocketNode = connection.OutputNode;
-                                }
-                                else
-                                {
-                                    connection =
-                                        MainGraph.EdgesTyped.FirstOrDefault(
-                                            x => x.OutputNode == nodeWhole && x.OutputSocketName == socket.Name);
-
-                                    if (connection != null)
-                                    {
-                                        dragSocket = connection.InputSocket;
-                                        dragSocketNode = connection.InputNode;
-                                    }
-                                }
-
-                                MainGraph.RemoveEdge(connection);
-                            }
-                            else
-                            {
-                                dragSocket = socket;
-                                dragSocketNode = nodeWhole;
-                            }
-                            dragConnectionBegin = this._lastMouseState.Position;
-                            dragConnectionEnd = this._lastMouseState.Position;
-                        }
+                        StartDragConnection(keyModifiers, nodeWhole, this._lastMouseState.Position);
                     }
                     else
                     {
@@ -460,6 +434,52 @@ namespace NodeEditor
                 {
                     OnNodeSelected(node);
                 }
+            }
+        }
+
+        private void StartDragConnection(KeyModifiers keyModifiers, NodeVisual? nodeWhole, Point mousePosition)
+        {
+            var socket = nodeWhole.GetSockets().All.FirstOrDefault(x => x.GetBounds().Contains(mousePosition));
+            if (socket != null)
+            {
+                if (keyModifiers.HasFlag(KeyModifiers.Control))
+                {
+                    var connection =
+                        MainGraph.EdgesTyped.FirstOrDefault(
+                            x => x.InputNode == nodeWhole && x.InputSocketName == socket.Name);
+
+                    if (connection != null)
+                    {
+                        // Re-drag existing connection's end
+                        dragSocket = connection.OutputSocket;
+                        dragSocketNode = connection.OutputNode;
+                    }
+                    else
+                    {
+                        // Re-drag existing connection's start
+                        connection =
+                            MainGraph.EdgesTyped.FirstOrDefault(
+                                x => x.OutputNode == nodeWhole && x.OutputSocketName == socket.Name);
+
+                        if (connection != null)
+                        {
+                            dragSocket = connection.InputSocket;
+                            dragSocketNode = connection.InputNode;
+                        }
+                    }
+
+                    // The old edge gets removed
+                    MainGraph.RemoveEdge(connection);
+                }
+                else
+                {
+                    // Start new connection drag
+                    dragSocket = socket;
+                    dragSocketNode = nodeWhole;
+                }
+
+                dragConnectionBegin = mousePosition;
+                dragConnectionEnd = mousePosition;
             }
         }
 
@@ -528,18 +548,23 @@ namespace NodeEditor
                 selectionStart = default;
             }
 
+            EndDragConnection(this._lastMouseState.Position);
+        }
+
+        private void EndDragConnection(Point mousePosition)
+        {
             if (dragSocket != null)
             {
                 var nodeWhole =
                     MainGraph.NodesTyped.OrderByDescending(x => x.BoundingBox.LeftTop).FirstOrDefault(
-                        x => new Rect(new Point(x.X, x.Y), x.GetNodeBounds()).Contains(this._lastMouseState.Position));
+                        x => new Rect(new Point(x.X, x.Y), x.GetNodeBounds()).Contains(mousePosition));
                 if (nodeWhole != null)
                 {
-                    var socket = nodeWhole.GetSockets().All.FirstOrDefault(x => x.GetBounds().Contains(this._lastMouseState.Position));
+                    var socket = nodeWhole.GetSockets().All.FirstOrDefault(x => x.GetBounds().Contains(mousePosition));
                     if (socket != null)
                     {
-                        if (IsConnectable(dragSocket,socket) && dragSocket.Input != socket.Input)
-                        {                                                        
+                        if (IsConnectable(dragSocket, socket) && dragSocket.Input != socket.Input)
+                        {
                             NodeConnection nc = null;
                             if (!dragSocket.Input)
                             {
@@ -554,9 +579,9 @@ namespace NodeEditor
                         }
                     }
                 }
+
+                dragSocket = null;
             }
-           
-            dragSocket = null;
         }
 
         public void SwapAutocompleteNode(Control tb, string text, NodeVisual newAutocompleteNode)
@@ -634,6 +659,10 @@ namespace NodeEditor
 
             MainGraph.Nodes.Remove(newAutocompleteNode);
             MainGraph.Nodes.Add(replacementNode);
+
+            // TODO: focus to canvas
+            this.Focus();
+            replacementNode.IsSelected = true;
 
             InvalidateVisual();
         }
@@ -891,6 +920,7 @@ namespace NodeEditor
             NodeVisual? currentNode = MainGraph.NodesTyped.Where(x => x.IsSelected).OrderByDescending(x => x.BoundingBox.LeftTop).FirstOrDefault();
             if (currentNode is not null)
             {
+                Point origPoint = this._lastMouseState.Position;
                 if (e.KeyModifiers.HasFlag(KeyModifiers.Control))
                 {
                     Point translatedPoint = this._lastMouseState.Position;
@@ -913,6 +943,7 @@ namespace NodeEditor
 
                     PointerPoint p = new PointerPoint(this._lastMouseState.Pointer, translatedPoint, new PointerPointProperties(RawInputModifiers.LeftMouseButton, PointerUpdateKind.LeftButtonPressed));
                     OnNodesControl_MouseMove(p);
+                    this.UpdateDragConnection(origPoint, translatedPoint);
                 }
                 else
                 {
@@ -931,30 +962,105 @@ namespace NodeEditor
                             .OrderBy(x => Math.Sqrt(Promote(Math.Abs(currentNode.BoundingBox.Left - x.BoundingBox.Right)) + Penalize(Math.Abs(currentNode.BoundingBox.Center.Y - x.BoundingBox.Center.Y))))
                             .FirstOrDefault();
                     }
-                    if (e.Key == Key.Up)
+                    else if (e.Key == Key.Up)
                     {
                         nextNode = MainGraph.NodesTyped
                             .Where(x => !x.IsSelected && currentNode.BoundingBox.Bottom > x.BoundingBox.Bottom)
                             .OrderBy(x => Math.Sqrt(Penalize(Math.Abs(currentNode.BoundingBox.Center.X - x.BoundingBox.Center.X)) + Promote(Math.Abs(currentNode.BoundingBox.Top - x.BoundingBox.Bottom))))
                             .FirstOrDefault();
                     }
-                    if (e.Key == Key.Down)
+                    else if (e.Key == Key.Down)
                     {
                         nextNode = MainGraph.NodesTyped
                             .Where(x => !x.IsSelected && currentNode.BoundingBox.Top < x.BoundingBox.Top)
                             .OrderBy(x => Math.Sqrt(Penalize(Math.Abs(currentNode.BoundingBox.Center.X - x.BoundingBox.Center.X)) + Promote(Math.Abs(currentNode.BoundingBox.Bottom - x.BoundingBox.Top))))
                             .FirstOrDefault();
                     }
-
+                    
                     if (nextNode is not null)
                     {
-                        this._lastMouseState = new PointerPoint(this._lastMouseState.Pointer, new Point(nextNode.BoundingBox.Left + 1, nextNode.BoundingBox.Top - 1), new PointerPointProperties(RawInputModifiers.LeftMouseButton, PointerUpdateKind.LeftButtonPressed));
+                        Point translatedPoint = new Point(nextNode.BoundingBox.Center.X, nextNode.BoundingBox.Center.Y);
+                        this._lastMouseState = new PointerPoint(this._lastMouseState.Pointer, translatedPoint, new PointerPointProperties(RawInputModifiers.LeftMouseButton, PointerUpdateKind.LeftButtonPressed));
                         this.OnNodesControl_MousePressed(PointerUpdateKind.LeftButtonPressed, 1);
+                        this.UpdateDragConnection(origPoint, translatedPoint);
+
+                        return;
                     }
 
                     double Penalize(double y) => 1.5 * y;
                     double Promote(double y) => y;
                 }
+            }
+
+            int? index = null;
+            bool isInput = false;
+            if (e.Key == Key.Escape && this.dragSocket != null)
+            {
+                this.dragSocket = null;
+            }
+            else if (e.Key >= Key.D1 && e.Key <= Key.D9)
+            {
+                index = e.Key - Key.D1;
+                isInput = true;
+            }
+            else
+            {
+                isInput = false;
+                index = e.Key switch
+                {
+                    Key.Q => 0,
+                    Key.W => 1,
+                    Key.E => 2,
+                    Key.R => 3,
+                    Key.T => 4,
+                    Key.Y => 5,
+                    Key.U => 6,
+                    Key.I => 7,
+                    Key.O => 8,
+                    _ => null
+                };
+            }
+
+            if (index is not null)
+            {
+                if (currentNode is null)
+                {
+                    SocketVisual? hoverSocket = MainGraph.NodesTyped.SelectMany(x => x.GetSockets().All).Where(x => x.ActiveHover).OrderByDescending(x => x.Location).FirstOrDefault();
+                    if (hoverSocket is not null)
+                    {
+                        SocketVisual target = (isInput ? hoverSocket.Parent.GetSockets().Inputs : hoverSocket.Parent.GetSockets().Outputs)[index.Value];
+                        if (target == hoverSocket)
+                        {
+                            var center = hoverSocket.Curve.BoundingBox.Center;
+                            this.StartDragConnection(KeyModifiers.None, hoverSocket.Parent, new Point(center.X, center.Y));
+                        }
+                        else
+                        {
+                            currentNode = hoverSocket.Parent;
+                        }
+                    }
+                }
+
+                if (currentNode is not null)
+                {
+                    List<SocketVisual> sockets = isInput ? currentNode.GetSockets().Inputs : currentNode.GetSockets().Outputs;
+                    if (sockets.Count > index)
+                    {
+                        SocketVisual sv = sockets[index.Value];
+                        var center = sv.Curve.BoundingBox.Center;
+                        if (dragSocketNode == currentNode && !sv.ActiveHover)
+                        {
+                            currentNode.IsSelected = false;
+                            this._lastMouseState = new PointerPoint(this._lastMouseState.Pointer, new Point(center.X, center.Y), new PointerPointProperties(RawInputModifiers.LeftMouseButton, PointerUpdateKind.LeftButtonPressed));
+                        }
+                        else if (this.dragSocket is not null && dragSocketNode != currentNode)
+                        {
+                            this.EndDragConnection(new Point(center.X, center.Y));
+                        }
+                    }
+                }
+
+                this.InvalidateVisual();
             }
         }
 
