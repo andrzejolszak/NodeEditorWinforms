@@ -281,23 +281,31 @@ public class FormsIntegration
     public void KeyboardCreate()
     {
         NodeVisual loadBang = AddNode("LoadBang", new Point(200, 200));
-        NodeVisual num = AddNode("NumberAndSign", new Point(400, 200));
         
-        this._graph.Nodes.Count.Should().Be(2);
+        PressKey(Key.Q);
+        PressKey(Key.Q);
+        this._control.DragStartSocket.Should().Be(loadBang.GetSockets().Outputs[0]);
 
         // Socket selection
         PressKey(Key.Enter, KeyModifiers.Control);
-        this._graph.Nodes.Count.Should().Be(3);
-        (this._graph.Nodes.Last() as NodeVisual).IsSelected.Should().BeFalse();
+        this._graph.Nodes.Count.Should().Be(2);
+        (this._graph.Nodes.Last() as NodeVisual).IsSelected.Should().BeTrue();
         (this._graph.Nodes.Last() as NodeVisual).Name.Should().Be("*new*");
+        this._control.DragStartSocket.Should().NotBeNull();
 
         AddNode("Compare", mouseTriggered: false);
 
-        this._graph.Nodes.Count.Should().Be(3);
+        this._graph.Nodes.Count.Should().Be(2);
         (this._graph.Nodes.Last() as NodeVisual).IsSelected.Should().BeTrue();
         (this._graph.Nodes.Last() as NodeVisual).Name.Should().Be("Compare");
-        (this._graph.Nodes.Last() as NodeVisual).BoundingBox.Left.Should().Be(400);
+        (this._graph.Nodes.Last() as NodeVisual).BoundingBox.Left.Should().Be(200);
         (this._graph.Nodes.Last() as NodeVisual).BoundingBox.Top.Should().BeGreaterThan(250);
+        this._control.DragStartSocket.Should().NotBeNull();
+
+        PressKey(Key.D1);
+        PressKey(Key.D1);
+        this._control.DragStartSocket.Should().BeNull();
+        this._graph.Edges.Should().HaveCount(1);
     }
 
     [AvaloniaTest]

@@ -14,4 +14,6 @@ public static class AvaloniaUtils
     public static Rect PixelAlign(this Rect self) => PixelSnapHelpers.PixelAlign(self, new Size(1, 1));
     public static Point PixelAlign(this Point self) => new Point(PixelSnapHelpers.PixelAlign(self.X, 1), PixelSnapHelpers.PixelAlign(self.Y, 1));
 
+    public static Point ToPoint(this Microsoft.Msagl.Core.Geometry.Point msaglPoint) => new Point(msaglPoint.X, msaglPoint.Y);
+    public static Microsoft.Msagl.Core.Geometry.Point ToMsaglPoint(this Point msaglPoint) => new Microsoft.Msagl.Core.Geometry.Point(msaglPoint.X, msaglPoint.Y);
 }

@@ -66,7 +66,7 @@ namespace NodeEditor
             }
 
             this.IsHover = isHover;
-            Avalonia.Media.Pen pen = new Avalonia.Media.Pen(new SolidColorBrush(this.BrushColor), this.IsHover ? 2 : 1);
+            Avalonia.Media.Pen pen = new Avalonia.Media.Pen(new SolidColorBrush(this.BrushColor), this.IsHover ? 2 : 1, Avalonia.Media.DashStyle.Dot);
 
             // this.PenEmhemeral.LineCap = Avalonia.Media.PenLineCap.Square;
 

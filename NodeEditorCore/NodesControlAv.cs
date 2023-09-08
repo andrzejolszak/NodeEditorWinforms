@@ -31,6 +31,8 @@ namespace NodeEditor
 
         private PointerPoint _lastMouseState;
 
+        private bool _skipMouseMovePostSwap = false;
+
         /// <summary>
         /// Context of the editor. You should set here an instance that implements INodesContext interface.
         /// In context you should define your nodes (methods decorated by Node attribute).
@@ -96,7 +98,7 @@ namespace NodeEditor
             this.Owner = owner;
             this.Focusable = true;
 
-            this.AttachedToVisualTree += this.OnNodesControl_VisibleChanged;
+            this.AttachedToVisualTree += (e, s) => this.Focus();
             this.PointerPressed += this.OnNodesControl_MousePressed;
             this.PointerMoved += this.OnNodesControl_MouseMove;
             this.PointerReleased += this.OnNodesControl_MouseUp;
@@ -168,7 +170,21 @@ namespace NodeEditor
             return new Rect(round ? Math.Round(x) : x, round ? Math.Round(y) : y, round ? Math.Round(w) : w, round ? Math.Round(h) : h);
         }
 
-        public void OnNodesControl_MouseMove(object s, PointerEventArgs eventArgs) => this.OnNodesControl_MouseMove(eventArgs.GetCurrentPoint(this));
+        public void OnNodesControl_MouseMove(object s, PointerEventArgs eventArgs)
+        {
+            if (!this.IsFocused)
+            {
+                return;
+            }
+            
+            if (this._skipMouseMovePostSwap)
+            {
+                this._skipMouseMovePostSwap = false;
+                return;
+            }
+
+            this.OnNodesControl_MouseMove(eventArgs.GetCurrentPoint(this));
+        }
 
         public void OnNodesControl_MouseMove(PointerPoint pointerPoint)
         {
@@ -202,8 +218,6 @@ namespace NodeEditor
 
                     OnShowLocation(bound);
                 }
-
-                InvalidateVisual();
             }
         }
 
@@ -293,7 +307,7 @@ namespace NodeEditor
                 (this.Content as Canvas).Children.Add(newAutocompleteNode.CustomEditorAv);
 
                 MainGraph.Nodes.Add(newAutocompleteNode);
-                InvalidateVisual();
+                newAutocompleteNode.IsSelected = true;
 
                 return;
             }
@@ -399,8 +413,6 @@ namespace NodeEditor
                     {
                         node.CustomEditorAv.BringIntoView();
                     }
-
-                    InvalidateVisual();
                 }
 
                 if (node != null)
@@ -627,11 +639,10 @@ namespace NodeEditor
             MainGraph.Nodes.Remove(newAutocompleteNode);
             MainGraph.Nodes.Add(replacementNode);
 
-            // TODO: focus to canvas
-            this.Focus();
             replacementNode.IsSelected = true;
+            this._skipMouseMovePostSwap = true;
 
-            InvalidateVisual();
+            this.Focus();
         }
 
         private void ChangeSelectedNodesColor(NodeVisual node)
@@ -647,8 +658,6 @@ namespace NodeEditor
             //         n.NodeColor = cd.Color;
             //     }
             // }
-
-            InvalidateVisual();
         }
 
         private void DuplicateSelectedNodes(NodeVisual node)
@@ -679,8 +688,6 @@ namespace NodeEditor
                 bw.Dispose();
                 ms.Dispose();
             }
-
-            InvalidateVisual();
         }
 
         private void DeleteSelectedNodes(NodeVisual node)
@@ -719,8 +726,6 @@ namespace NodeEditor
 
                 MainGraph.Nodes = MainGraph.Nodes.Except(selected).ToList();
             }
-
-            InvalidateVisual();
         }
 
         private void DeleteHoveredConns()
@@ -729,8 +734,6 @@ namespace NodeEditor
             {
                 MainGraph.RemoveEdge(e);
             }
-
-            InvalidateVisual();
         }
 
         private void ToggleEdgeRouting()
@@ -868,6 +871,11 @@ namespace NodeEditor
 
         public void OnNodesControl_KeyDown(object sender, KeyEventArgs e)
         {
+            if (e.KeyModifiers.HasFlag(KeyModifiers.Control) && e.Key == Key.Space)
+            {
+                return;
+            }
+
             if (e.Key == Key.Delete && !IsRunMode)
             {
                 DeleteSelectedNodes(null);
@@ -884,14 +892,14 @@ namespace NodeEditor
                 this.ToggleEdgeRouting();
             }
 
-            Microsoft.Msagl.Core.Geometry.Point mousePoint = new Microsoft.Msagl.Core.Geometry.Point(this._lastMouseState.Position.X, this._lastMouseState.Position.Y);
+            Microsoft.Msagl.Core.Geometry.Point mousePoint = this._lastMouseState.Position.ToMsaglPoint();
             NodeVisual? currentNode = MainGraph.NodesTyped.Where(x => x.IsSelected).OrderByDescending(x => x.BoundingBox.LeftTop).FirstOrDefault();
             if (currentNode is null && this.DragStartSocket is not null)
             {
                 currentNode = MainGraph.NodesTyped.Where(x => x.BoundingBox.Contains(mousePoint)).OrderByDescending(x => x.BoundingBox.LeftTop).FirstOrDefault();
             }
 
-            Microsoft.Msagl.Core.Geometry.Rectangle rect = currentNode?.BoundingBox ?? new Microsoft.Msagl.Core.Geometry.Rectangle(new Microsoft.Msagl.Core.Geometry.Point(this._lastMouseState.Position.X, this._lastMouseState.Position.Y));
+            Microsoft.Msagl.Core.Geometry.Rectangle rect = currentNode?.BoundingBox ?? new Microsoft.Msagl.Core.Geometry.Rectangle(this._lastMouseState.Position.ToMsaglPoint());
 
             if (e.KeyModifiers.HasFlag(KeyModifiers.Control) && e.Key == Key.Enter)
             {
@@ -899,13 +907,22 @@ namespace NodeEditor
                 if (currentNode is not null)
                 {
                     currentNode.IsSelected = false;
-                    translated = new Point(currentNode.BoundingBox.Left, currentNode.BoundingBox.Top + currentNode.BoundingBox.Height + 50);
+                    Point newLocation = this.DragStartSocket?.Input switch
+                    {
+                        null => new Point(currentNode.BoundingBox.Left, currentNode.BoundingBox.Top + currentNode.BoundingBox.Height + 50),
+                        false => new Point(currentNode.BoundingBox.Left, currentNode.BoundingBox.Top + currentNode.BoundingBox.Height + 50),
+                        true => new Point(currentNode.BoundingBox.Left, currentNode.BoundingBox.Top - 50 - NodeVisual.HeaderHeight),
+                    };
+
+                    translated = newLocation;
                 }
 
                 PointerPoint p = new PointerPoint(this._lastMouseState.Pointer, translated, new PointerPointProperties(RawInputModifiers.LeftMouseButton, PointerUpdateKind.LeftButtonPressed));
                 OnNodesControl_MouseMove(p);
 
                 this.OnNodesControl_MousePressed(PointerUpdateKind.LeftButtonPressed, 2);
+
+                this._lastMouseState = new PointerPoint(this._lastMouseState.Pointer, new Point(translated.X + 10, translated.Y - 10), new PointerPointProperties(RawInputModifiers.LeftMouseButton, PointerUpdateKind.LeftButtonPressed));
             }
 
             Point origPoint = this._lastMouseState.Position;
@@ -975,7 +992,7 @@ namespace NodeEditor
 
                 if (nextNode is not null)
                 {
-                    Point translatedPoint = new Point(nextNode.BoundingBox.Center.X, nextNode.BoundingBox.Center.Y);
+                    Point translatedPoint = nextNode.BoundingBox.Center.ToPoint();
                     this._lastMouseState = new PointerPoint(this._lastMouseState.Pointer, translatedPoint, new PointerPointProperties(RawInputModifiers.LeftMouseButton, PointerUpdateKind.LeftButtonPressed));
                     if (this.DragStartSocket is null)
                     {
@@ -997,12 +1014,10 @@ namespace NodeEditor
             bool isInput = false;
             if (e.Key == Key.Escape && this.DragStartSocket != null)
             {
-                Point translatedPoint = new Point(this.DragStartSocket.Parent.BoundingBox.Center.X, this.DragStartSocket.Parent.BoundingBox.Center.Y);
+                Point translatedPoint =this.DragStartSocket.Parent.BoundingBox.Center.ToPoint();
                 this.DragStartSocket = null;
                 this._lastMouseState = new PointerPoint(this._lastMouseState.Pointer, translatedPoint, new PointerPointProperties(RawInputModifiers.LeftMouseButton, PointerUpdateKind.LeftButtonPressed));
                 this.OnNodesControl_MousePressed(PointerUpdateKind.LeftButtonPressed, 1);
-
-                this.InvalidateVisual();
             }
             else if (e.Key >= Key.D1 && e.Key <= Key.D9)
             {
@@ -1034,7 +1049,7 @@ namespace NodeEditor
                 {
                     if (this.DragStartSocket is not null && currentNode is null)
                     {
-                        Microsoft.Msagl.Core.Geometry.Point point = new Microsoft.Msagl.Core.Geometry.Point(this._lastMouseState.Position.X, this._lastMouseState.Position.Y);
+                        Microsoft.Msagl.Core.Geometry.Point point = this._lastMouseState.Position.ToMsaglPoint();
                         currentNode = MainGraph.NodesTyped.Where(x => x.BoundingBox.Contains(point, 0)).OrderByDescending(x => x.BoundingBox.LeftTop).FirstOrDefault();
                     }
 
@@ -1047,12 +1062,12 @@ namespace NodeEditor
                     if (this.DragStartSocket is null && keyboardTargetSocket == hoverSocket)
                     {
                         // Double-tap
-                        this._lastMouseState = new PointerPoint(this._lastMouseState.Pointer, new Point(center.X, center.Y), new PointerPointProperties(RawInputModifiers.LeftMouseButton, PointerUpdateKind.LeftButtonPressed));
-                        this.StartDragConnection(KeyModifiers.None, hoverSocket.Parent, new Point(center.X, center.Y));
+                        this._lastMouseState = new PointerPoint(this._lastMouseState.Pointer, center.ToPoint(), new PointerPointProperties(RawInputModifiers.LeftMouseButton, PointerUpdateKind.LeftButtonPressed));
+                        this.StartDragConnection(KeyModifiers.None, hoverSocket.Parent, center.ToPoint());
                     }
                     else if (this.DragStartSocket is not null && this.DragStartSocket.Input != hoverSocket.Input && hoverSocket == keyboardTargetSocket)
                     {
-                        this.EndDragConnection(new Point(center.X, center.Y));
+                        this.EndDragConnection(center.ToPoint());
                         hoverSocket.Parent.IsSelected = true;
                     }
                     else
@@ -1073,19 +1088,10 @@ namespace NodeEditor
                         {
                             // Hover a socket
                             currentNode.IsSelected = false;
-                            this._lastMouseState = new PointerPoint(this._lastMouseState.Pointer, new Point(center.X, center.Y), new PointerPointProperties(RawInputModifiers.LeftMouseButton, PointerUpdateKind.LeftButtonPressed));
+                            this._lastMouseState = new PointerPoint(this._lastMouseState.Pointer, center.ToPoint(), new PointerPointProperties(RawInputModifiers.LeftMouseButton, PointerUpdateKind.LeftButtonPressed));
                         }
                     }
                 }
-
-                this.InvalidateVisual();
-            }
-        }
-
-        public void OnNodesControl_VisibleChanged(object sender, EventArgs e)
-        {
-            if (!this.IsVisible)
-            {
             }
         }
 
@@ -1117,8 +1123,6 @@ namespace NodeEditor
 
             this.MinHeight = 600;
             this.Bounds = new Rect(0, 0, 800, 600);
-
-            this.InvalidateVisual();
         }
     }
 }
