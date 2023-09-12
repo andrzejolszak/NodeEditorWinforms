@@ -141,7 +141,7 @@ namespace NodeEditor
                 MainGraph.RouteEdges();
             }
 
-            MainGraph.DrawAv(e, this._lastMouseState, this.IsRunMode, this.Bounds.Width, this.Bounds.Height);
+            MainGraph.DrawAv(e, this._lastMouseState, this.IsRunMode, this.Bounds.Width, this.Bounds.Height, this.DragStartSocket);
 
             if (DragStartSocket != null)
             {
@@ -462,39 +462,6 @@ namespace NodeEditor
             }
         }
 
-        private bool IsConnectable(SocketVisual a, SocketVisual b)
-        {
-            var input = a.Input ? a : b;
-            var output = a.Input ? b : a;
-            var otype = Type.GetType(output.Type.FullName.Replace("&", ""), AssemblyResolver, TypeResolver);
-            var itype = Type.GetType(input.Type.FullName.Replace("&", ""), AssemblyResolver, TypeResolver);
-            if (otype == null || itype == null) return false;
-            var allow = otype == itype
-                || itype == typeof(object)
-                || otype.IsSubclassOf(itype)
-                || otype.IsAssignableFrom(itype)
-                || itype == typeof(Bang)
-                || otype == typeof(Bang);
-            return allow;
-        }
-
-        private Type TypeResolver(Assembly assembly, string name, bool inh)
-        {
-            if (assembly == null) assembly = ResolveAssembly(name);
-            if (assembly == null) return null;
-            return assembly.GetType(name);
-        }
-
-        private Assembly ResolveAssembly(string fullTypeName)
-        {
-            return AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(x => x.GetTypes().Any(o => o.FullName == fullTypeName));
-        }
-
-        private Assembly AssemblyResolver(AssemblyName assemblyName)
-        {
-            return AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(x => x.FullName == assemblyName.FullName);
-        }
-
         public void OnNodesControl_MouseUp(object sender, PointerReleasedEventArgs eventArgs)
         {
             if (!IsRunMode
@@ -506,13 +473,9 @@ namespace NodeEditor
                 var s = node.GetSockets();
                 if (s.Inputs.Count > 0 && s.Outputs.Count > 0 && !MainGraph.EdgesTyped.Any(x => x.InputNode == node || x.OutputNode == node))
                 {
-                    if (IsConnectable(hoverConn.OutputSocket, s.Inputs.First())
-                        && IsConnectable(hoverConn.InputSocket, s.Outputs.First()))
-                    {
-                        MainGraph.AddEdge(new NodeConnection(hoverConn.OutputNode, hoverConn.OutputSocketName, node, s.Inputs.First().Name));
-                        MainGraph.AddEdge(new NodeConnection(node, s.Outputs.First().Name, hoverConn.InputNode, hoverConn.InputSocketName));
-                        MainGraph.RemoveEdge(hoverConn);
-                    }
+                    MainGraph.AddEdge(new NodeConnection(hoverConn.OutputNode, hoverConn.OutputSocketName, node, s.Inputs.First().Name));
+                    MainGraph.AddEdge(new NodeConnection(node, s.Outputs.First().Name, hoverConn.InputNode, hoverConn.InputSocketName));
+                    MainGraph.RemoveEdge(hoverConn);
                 }
             }
 
@@ -542,7 +505,7 @@ namespace NodeEditor
                     var socket = nodeWhole.GetSockets().All.FirstOrDefault(x => x.GetBounds().Contains(mousePosition));
                     if (socket != null)
                     {
-                        if (IsConnectable(DragStartSocket, socket) && DragStartSocket.Input != socket.Input)
+                        if (DragStartSocket.Input != socket.Input)
                         {
                             NodeConnection nc = null;
                             if (!DragStartSocket.Input)
@@ -706,9 +669,7 @@ namespace NodeEditor
                         NodeConnection? inCon = MainGraph.EdgesTyped.FirstOrDefault(x => x.InputSocket == s.Inputs.First());
                         NodeConnection? outCon = MainGraph.EdgesTyped.FirstOrDefault(x => x.OutputSocket == s.Outputs.First());
 
-                        if (inCon is not null
-                            && outCon is not null
-                            && IsConnectable(inCon.OutputSocket, outCon.InputSocket))
+                        if (inCon is not null && outCon is not null)
                         {
                             MainGraph.AddEdge(new NodeConnection(inCon.OutputNode, inCon.OutputSocketName, outCon.InputNode, outCon.InputSocketName));
                         }
@@ -721,6 +682,10 @@ namespace NodeEditor
                     foreach (NodeConnection e in MainGraph.EdgesTyped.Where(x => x.OutputNode == n || x.InputNode == n).ToArray())
                     {
                         MainGraph.RemoveEdge(e);
+                        if (e.OutputSocket.Value == e.InputSocket.Value)
+                        {
+                            e.InputSocket.Value = null;
+                        }
                     }
                 }
 

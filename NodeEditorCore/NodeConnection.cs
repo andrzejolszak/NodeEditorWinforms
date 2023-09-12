@@ -35,6 +35,7 @@ namespace NodeEditor
         public string OutputSocketName { get; }
         public NodeVisual InputNode => this.Target as NodeVisual;
         public string InputSocketName { get; }
+        public Avalonia.Media.DashStyle RunDashStyle { get; }
 
         public string GUIDEphemeral = Guid.NewGuid().ToString();
 
@@ -47,6 +48,7 @@ namespace NodeEditor
         {
             OutputSocketName = outputSocketName;
             InputSocketName = inputSocketName;
+            this.RunDashStyle = new Avalonia.Media.DashStyle(new double[] { 2, 2 }, 0);
         }
 
         public SocketVisual OutputSocket => OutputNode.GetSockets().Outputs.FirstOrDefault(x => x.Name == OutputSocketName);
@@ -66,7 +68,7 @@ namespace NodeEditor
             }
 
             this.IsHover = isHover;
-            Avalonia.Media.Pen pen = new Avalonia.Media.Pen(new SolidColorBrush(this.BrushColor), this.IsHover ? 2 : 1, Avalonia.Media.DashStyle.Dot);
+            Avalonia.Media.Pen pen = new Avalonia.Media.Pen(new SolidColorBrush(this.BrushColor), this.IsHover ? 2 : 1, this.RunDashStyle);
 
             // this.PenEmhemeral.LineCap = Avalonia.Media.PenLineCap.Square;
 
@@ -299,26 +301,13 @@ namespace NodeEditor
                 return false;
             }
 
-            bool isUpdate = this.InputSocket.Value != this.OutputSocket.Value;
-            if (isUpdate)
-            {
-                Avalonia.Media.Color orgBrush = this.BrushColor;
-                _ = Animate.Instance?.Recolor(
-                    this.GUIDEphemeral,
-                    orgBrush,
-                    x => this.BrushColor = x,
-                    Easings.CubicIn,
-                    200,
-                    Colors.DarkGoldenrod).ContinueWith(
-                        t => Animate.Instance?.Recolor(
-                            this.GUIDEphemeral,
-                            this.BrushColor,
-                            x => this.BrushColor = x,
-                            Easings.CubicOut,
-                            500,
-                            orgBrush)
-                    );
-            }
+            _ = Animate.Instance?.Ease(
+                this.GUIDEphemeral,
+                0d,
+                x => this.RunDashStyle.Offset = x,
+                Easings.CubicIn,
+                1000,
+                -10d);
 
             if (this.InputSocket.Type == typeof(Bang))
             {

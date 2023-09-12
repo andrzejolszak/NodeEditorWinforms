@@ -9,6 +9,7 @@ public static class AvaloniaUtils
     public static readonly Typeface FontMonospaceCondensed = new Typeface(FontFamily.Parse("Consolas,Menlo,Monospace"), FontStyle.Normal, FontWeight.Normal, FontStretch.Condensed);
     public static readonly Pen BlackPen1 = new Pen(Brushes.Black);
     public static readonly Pen BlackPen2 = new Pen(Brushes.Black, 2);
+    public static readonly Pen RedPen2 = new Pen(Brushes.Red, 2);
 
     public static readonly Lazy<Cursor> CursorHand = new Lazy<Cursor>(() => Cursor.Parse("Hand"));
     public static Rect PixelAlign(this Rect self) => PixelSnapHelpers.PixelAlign(self, new Size(1, 1));

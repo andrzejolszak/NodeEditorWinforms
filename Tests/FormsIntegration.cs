@@ -20,7 +20,7 @@ public class FormsIntegration
                 "NumberAndSign",
                 (c, i) =>
                 {
-                    return new object[2] { i[0], Math.Sign((int?)i[0] ?? 0) };
+                    return new object[2] { i[0] ?? 0, Math.Sign((int?)i[0] ?? 0) };
                 },
                 isInteractive: true,
                 displayTextSelector: (c, i) => (i?[0] ?? "0").ToString())
@@ -88,7 +88,7 @@ public class FormsIntegration
         this._graph.Nodes.Should().HaveCount(2);
 
         // Curried node
-        NodeVisual counterC = AddNode("CounterC" + " * 3");
+        NodeVisual counterC = AddNode("CounterC * 3");
 
         AddEdge(loadBang, 0, counterC, 0);
         AddEdge(bang, 0, counterC, 0);
@@ -276,6 +276,88 @@ public class FormsIntegration
         this._graph.Edges.Count.Should().Be(0);
     }
 
+    [AvaloniaTest]
+    public void ConnectionWithTypeMismatch()
+    {
+        NodeVisual loadBang = AddNode("LoadBang", new Point(200, 200));
+
+        NodeVisual num = AddNode("NumberAndSign", new Point(400, 200));
+        num.GetSockets().Outputs[0].Type.Should().Be<int?>();
+        
+        NodeVisual compare = AddNode("Compare", new Point(400, 400));
+        compare.GetSockets().Inputs[1].Type.Should().Be<string>();
+
+        // Socket selection
+        PressKey(Key.D2);
+        PressKey(Key.D2);
+        this._control.DragStartSocket.Should().Be(compare.GetSockets().Inputs[1]);
+
+        PressKey(Key.Up);
+
+        PressKey(Key.D1);
+        num.GetSockets().Inputs[0].ActiveHover.Should().BeTrue();
+
+        PressKey(Key.D1);
+        num.GetSockets().Inputs[0].IsCompatibleForConnection(this._control.DragStartSocket!).Should().BeFalse();
+        num.GetSockets().Inputs[0].ActiveHover.Should().BeTrue();
+        this._graph.Edges.Should().HaveCount(0);
+
+        PressKey(Key.Q);
+        num.GetSockets().Inputs[0].ActiveHover.Should().BeFalse();
+        num.GetSockets().Outputs[0].ActiveHover.Should().BeTrue();
+        this._graph.Edges.Should().HaveCount(0);
+        num.GetSockets().Inputs[0].IsCompatibleForConnection(this._control.DragStartSocket!).Should().BeFalse();
+        num.GetSockets().Inputs[0].IsCompatibleForConnection(loadBang.GetSockets().Outputs[0]).Should().BeTrue();
+
+        PressKey(Key.Q);
+        num.GetSockets().Outputs[0].ActiveHover.Should().BeFalse();
+        this._graph.Edges.Should().HaveCount(1);
+
+        AddEdge(loadBang, 0, num, 0);
+        AddEdge(num, 0, compare, 0);
+        AddEdge(num, 0, compare, 2);
+
+        PressKey(Key.E, KeyModifiers.Control);
+        compare.GetSockets().Outputs[0].Value.Should().Be(null);
+        _feedbackErrors.Should().Be(1);
+    }
+
+    [AvaloniaTest]
+    public void ConnectionToCurriedPortOverwritesCurry()
+    {
+        NodeVisual loadBang = AddNode("LoadBang", new Point(200, 200));
+        NodeVisual num = AddNode("NumberAndSign 2", new Point(400, 200));
+        AddEdge(loadBang, 0, num, 0);
+
+        NodeVisual compare = AddNode("Compare 1 == 2", new Point(400, 400));
+        compare.GetSockets().Inputs[0].CurriedValue.Should().Be(1);
+        compare.GetSockets().Inputs[1].CurriedValue.Should().Be("==");
+        compare.GetSockets().Inputs[2].CurriedValue.Should().Be(2);
+
+        PressKey(Key.D1);
+        PressKey(Key.D1);
+        compare.GetSockets().Inputs[0].ActiveHover.Should().BeTrue();
+
+        PressKey(Key.Up);
+
+        PressKey(Key.Q);
+        PressKey(Key.Q);
+
+        this._graph.Edges.Should().HaveCount(2);
+
+        ToggleEditMode();
+        compare.GetSockets().Outputs[0].Value.Should().Be(true);
+
+        ToggleEditMode();
+
+        ClickNode(num);
+        PressKey(Key.Delete);
+
+        this._graph.Edges.Should().HaveCount(1);
+
+        ToggleEditMode();
+        compare.GetSockets().Outputs[0].Value.Should().Be(false);
+    }
 
     [AvaloniaTest]
     public void KeyboardCreate()

@@ -64,7 +64,7 @@ namespace NodeEditor
             return new Rect(this.Location.X, this.Location.Y, Width, Height);
         }
 
-        public void DrawAv(DrawingContext g, PointerPoint mouse, NodeVisual parent, bool isRunMode)
+        public void DrawAv(DrawingContext g, PointerPoint mouse, NodeVisual parent, bool isRunMode, bool consideredForConnection, SocketVisual? connectionSocket)
         {
             float x = (float)this.Location.X;
             float y = (float)this.Location.Y;
@@ -93,8 +93,35 @@ namespace NodeEditor
                 g.FillRectangle(Brushes.PaleGoldenrod, socketRect);
             }
 
+            if (connectionSocket is not null && !this.IsCompatibleForConnection(connectionSocket))
+            {
+                this.DrawError(g);
+            }
+
             FormattedText ft = new FormattedText(Type.Name.Substring(0, 1).ToLowerInvariant(), CultureInfo.InvariantCulture, FlowDirection.LeftToRight, AvaloniaUtils.FontMonospaceCondensed, 9, Brushes.White);
             g.DrawText(ft, new Point(x + Width/2 - ft.Width/2, y));
+        }
+
+        public void DrawError(DrawingContext g)
+        {
+            g.DrawRectangle(AvaloniaUtils.RedPen2, new Rect(this.Location.X, this.Location.Y, Width, Height).PixelAlign().Inflate(2));
+        }
+
+        public bool IsCompatibleForConnection(SocketVisual other)
+        {
+            var input = this.Input ? this : other;
+            var output = this.Input ? other : this;
+            var otype = output.Type;
+            var itype = input.Type;
+            if (otype == null || itype == null) return false;
+            if (input.Input == output.Input) return false;
+            var allow = otype == itype
+                || itype == typeof(object)
+                || otype.IsSubclassOf(itype)
+                || otype.IsAssignableFrom(itype)
+                || itype == typeof(Bang)
+                || otype == typeof(Bang);
+            return allow;
         }
     }
 }

@@ -38,14 +38,14 @@ namespace NodeEditor
 
         public string GUID = Guid.NewGuid().ToString();
 
-        public void DrawAv(DrawingContext g, PointerPoint mouse, bool isRunMode, double width, double height)
+        public void DrawAv(DrawingContext g, PointerPoint mouse, bool isRunMode, double width, double height, SocketVisual? dragSocket)
         {           
             g.FillRectangle(new SolidColorBrush(Color.FromArgb(220, 255, 255, 255)), new Rect(0,0, width, height));
             
             var orderedNodes = Nodes.OrderBy(x => x.BoundingBox.LeftTop);
             foreach (var node in orderedNodes)
             {
-                (node as NodeVisual).DrawAv(g, mouse, isRunMode);
+                (node as NodeVisual).DrawAv(g, mouse, isRunMode, dragSocket);
             }
             
             if (KdTree != null && !_hoverRecalc)
@@ -66,6 +66,12 @@ namespace NodeEditor
                 bool isHover = connection == _hoverConnection;
                 Point[] points = connection.DrawAv(g, isHover, isRunMode);
                 _pointsAv.Add((connection, points));
+
+                if (!connection.InputSocket.IsCompatibleForConnection(connection.OutputSocket))
+                {
+                    connection.OutputSocket.DrawError(g);
+                    connection.InputSocket.DrawError(g);
+                }
             }
             
             float newChecksum = this._pointsAv.SelectMany(x => x.Item2).Sum(x => (float)x.X);

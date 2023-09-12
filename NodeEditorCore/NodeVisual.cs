@@ -240,7 +240,11 @@ namespace NodeEditor
 
                     if (addCurry && curry[inputSocketList.Count] != "*")
                     {
-                        socket.CurryDefault = Convert.ChangeType(curry[inputSocketList.Count], pp.Type);
+                        socket.CurryDefault = pp.Type switch
+                        {
+                            var t when t == typeof(int) || t == typeof(int?) => int.Parse(curry[inputSocketList.Count]),
+                            _ => Convert.ChangeType(curry[inputSocketList.Count], pp.Type)
+                        };
                     }
 
                     inputSocketList.Add(socket);
@@ -302,7 +306,7 @@ namespace NodeEditor
 ;
         }
 
-        public void DrawAv(DrawingContext g, PointerPoint mouse, bool isRunMode)
+        public void DrawAv(DrawingContext g, PointerPoint mouse, bool isRunMode, SocketVisual? dragSocket)
         {
             var rect = new Rect(new Point((float)X, (float)Y), GetNodeBounds()).PixelAlign();
 
@@ -346,7 +350,7 @@ namespace NodeEditor
             
             foreach (var socet in GetSockets().All)
             {
-                socet.DrawAv(g, mouse, this, isRunMode);
+                socet.DrawAv(g, mouse, this, isRunMode, dragSocket is not null, dragSocket);
             }
         }
 
