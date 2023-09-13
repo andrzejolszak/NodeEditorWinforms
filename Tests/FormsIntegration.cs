@@ -13,9 +13,11 @@ public class FormsIntegration
 {
     public class TestContext : BasicContext
     {
+        public List<NodeDescriptor> DynamicNodeDescriptions = new List<NodeDescriptor>();
+
         public override List<NodeDescriptor> GetNodeDescriptors()
         {
-            List<NodeDescriptor> nds = base.GetNodeDescriptors();
+            List<NodeDescriptor> nds = base.GetNodeDescriptors().Concat(DynamicNodeDescriptions).ToList();
             nds.Add(new NodeDescriptor(
                 "NumberAndSign",
                 (c, i) =>
@@ -53,6 +55,98 @@ public class FormsIntegration
         {
             _feedbackErrors += type == FeedbackType.Error ? 1 : 0;
         };
+    }
+
+    public static bool TryAdd(int a, double? b, out double res)
+    {
+        res = a + (b ?? 0);
+        return true;
+    }
+
+    public static void TryAddVoid(int a, double? b, out double res)
+    {
+        res = a + (b ?? 0);
+    }
+
+    public bool TryDivNonStatic(int a, List<double> b, out double res)
+    {
+        res = a / b.First();
+        return true;
+    }
+
+    public static bool TryAddOutMixedOrdering(int a, out double res, double? b)
+    {
+        res = a + (b ?? 0);
+        return true;
+    }
+
+    public static (double?, string) TryAddRes(int a, int? b = 3)
+    {
+        return (a + (b ?? 0), "hello");
+    }
+
+    [AvaloniaTest]
+    public void WrapMethod()
+    {
+        double foo;
+
+        (NodeDescriptor? desc, string explanation) = NodeDescriptor.WrapAction(() => this.TryDivNonStatic(0, new List<double> { 0 }, out foo));
+        desc.Should().BeNull();
+
+        (desc, explanation) = NodeDescriptor.WrapAction(() => TryAddOutMixedOrdering(0, out foo, 0));
+        desc.Should().BeNull();
+
+        {
+            (desc, explanation) = NodeDescriptor.WrapAction(() => TryAddVoid(0, 0, out foo));
+            NodeVisual node = new NodeVisual(desc.Name, 0, 0) { NodeDesc = desc };
+            node.GetSockets().Inputs.Should().HaveCount(2);
+            node.GetSockets().Outputs.Should().HaveCount(1);
+
+            node.GetSockets().Inputs[0].Value = 1;
+            node.GetSockets().Inputs[1].Value = 2d;
+            node.Execute(this._context, null);
+            node.GetSockets().Outputs[0].Value.Should().Be(3d);
+        }
+
+        {
+            (desc, explanation) = NodeDescriptor.WrapAction(() => TryAdd(0, 0, out foo));
+            NodeVisual node = new NodeVisual(desc.Name, 0, 0) { NodeDesc = desc };
+            node.GetSockets().Inputs.Should().HaveCount(2);
+            node.GetSockets().Outputs.Should().HaveCount(2);
+
+            node.GetSockets().Inputs[0].Value = 1;
+            node.GetSockets().Inputs[1].Value = 5d;
+            node.Execute(this._context, null);
+            node.GetSockets().Outputs[0].Value.Should().Be(true);
+            node.GetSockets().Outputs[1].Value.Should().Be(6d);
+        }
+
+        {
+            (desc, explanation) = NodeDescriptor.WrapAction(() => TryAddRes(0, 0));
+            NodeVisual node = new NodeVisual(desc.Name, 0, 0) { NodeDesc = desc };
+            node.GetSockets().Inputs.Should().HaveCount(2);
+            node.GetSockets().Outputs.Should().HaveCount(1);
+
+            node.GetSockets().Inputs[0].Value = 2;
+            node.GetSockets().Inputs[1].Value = 7;
+            node.Execute(this._context, null);
+            node.GetSockets().Outputs[0].Value.Should().BeEquivalentTo((9d, "hello"));
+        }
+    }
+
+    [AvaloniaTest]
+    public void UseDynamicallyWrapped()
+    {
+        this._context.DynamicNodeDescriptions.Add(NodeDescriptor.WrapAction(() => TryAddRes(0, 0)).Item1);
+
+        NodeVisual loadBang = AddNode("LoadBang");
+        NodeVisual add = AddNode("TryAddRes 5 7");
+        
+        AddEdge(loadBang, 0, add, 0);
+
+        ToggleEditMode();
+
+        AssertOutputValue(add, 0, (12, "hello"));
     }
 
     [AvaloniaTest]
@@ -591,7 +685,7 @@ public class FormsIntegration
 
     void AssertOutputValue(NodeVisual node, int outputIndex, object? value)
     {
-        node.GetSockets().Outputs[outputIndex].Value.Should().Be(value);
+        node.GetSockets().Outputs[outputIndex].Value.Should().BeEquivalentTo(value);
         _feedbackErrors.Should().Be(0);
     }
     NodeVisual AddNode(string nodeName, Point? location = null, bool mouseTriggered = true)

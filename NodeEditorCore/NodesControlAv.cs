@@ -145,7 +145,7 @@ namespace NodeEditor
 
             if (DragStartSocket != null)
             {
-                NodeConnection.DrawDragConnectionAv(e, AvaloniaUtils.BlackPen1, this.DragStartSocket.GetBounds().Center, this._lastMouseState.Position);
+                NodeConnection.DrawDragConnectionAv(e, AvaloniaUtils.BlackPen1, this.DragStartSocket.GetBounds().Center, this._lastMouseState.Position, null);
             }
 
             if (selectionStart != default)

@@ -52,7 +52,7 @@ namespace NodeEditor
 
         public string? CustomDisplayText { get; private set; }
 
-        internal NodeDescriptor NodeDesc { get; set; }
+        public NodeDescriptor NodeDesc { get; set; }
         public bool IsSelected { get; set; }
         public FeedbackType Feedback { get; set; }
         public Control CustomEditorAv { get; set; }
@@ -78,7 +78,7 @@ namespace NodeEditor
 
         public NodeType Type { get; private set; }
 
-        internal NodeVisual(string name, double x0, double y0) : base(new RoundedRect(new Microsoft.Msagl.Core.Geometry.Rectangle(x0, y0, x0, y0), 1, 1))
+        public NodeVisual(string name, double x0, double y0) : base(new RoundedRect(new Microsoft.Msagl.Core.Geometry.Rectangle(x0, y0, x0, y0), 1, 1))
         {
             this.Feedback = FeedbackType.None;
             this.Name = name;

@@ -25,6 +25,7 @@ using LineSegment = Microsoft.Msagl.Core.Geometry.Curves.LineSegment;
 using P2 = Microsoft.Msagl.Core.Geometry.Point;
 using Polyline = Microsoft.Msagl.Core.Geometry.Curves.Polyline;
 using RoundedRect = Microsoft.Msagl.Core.Geometry.Curves.RoundedRect;
+using System.Runtime.CompilerServices;
 
 namespace NodeEditor
 {
@@ -79,7 +80,7 @@ namespace NodeEditor
             
             if (this.Curve is null)
             {
-                Avalonia.Point[] points = DrawDragConnectionAv(g, pen, begin, end);
+                Avalonia.Point[] points = DrawDragConnectionAv(g, pen, begin, end, Math.Abs(this.RunDashStyle.Offset / 10d));
                 return points;
             }
             else
@@ -231,7 +232,7 @@ namespace NodeEditor
             }
         }
 
-        public static Avalonia.Point[] DrawDragConnectionAv(DrawingContext g,  Avalonia.Media.Pen pen, Avalonia.Point output, Avalonia.Point input)
+        public static Avalonia.Point[] DrawDragConnectionAv(DrawingContext g, Avalonia.Media.Pen pen, Avalonia.Point output, Avalonia.Point input, double? animationMultiplier)
         {
            
             if (input == output)
@@ -269,8 +270,15 @@ namespace NodeEditor
                     g.DrawLine(pen, points[i - 1], points[i]);
                 }
             }
-            
-            g.DrawGeometry(null, pen, new PolylineGeometry(points, false));
+
+            PolylineGeometry geom = new PolylineGeometry(points, false);
+            g.DrawGeometry(null, pen, geom);
+
+            double contour = geom.ContourLength;
+            if (animationMultiplier is not null && geom.TryGetPointAtDistance(animationMultiplier.Value * contour, out Avalonia.Point markerLocation))
+            {
+                g.DrawEllipse(Avalonia.Media.Brushes.Maroon, null, markerLocation, 3, 3);
+            }
             
             return points;
             
